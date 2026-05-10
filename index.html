@@ -1381,6 +1381,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   const coordAlt  = document.getElementById('descent-coord-alt');
 
   if(!canvas || !ctx) return;
+  // Phase-1 cut: descent intro is no longer activated. Without the descent
+  // ever firing, `unlocked` would stay false forever and the wheel/touchmove
+  // listeners below would permanently block scrolling. Bail early when the
+  // descent isn't activated by the body class.
+  if(!document.body.classList.contains('descent-active')) return;
 
   const FRAME_COUNT  = 121;  // 5.04s × 24fps
   const FRAME_PATH   = i => `frames/f${String(i+1).padStart(4,'0')}.jpg`;
