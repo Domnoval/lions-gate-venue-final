@@ -72,7 +72,7 @@
       font-size:0.75rem; font-weight:300; letter-spacing:0.3em;
       text-transform:uppercase; padding:0.9em 2.5em; cursor:pointer;
       transition:all 0.4s ease; margin-top:0.5rem;
-      display:none;  /* auto-advance from descent — no second click */
+      display:inline-block;
     }
     #enter-btn:hover { background:rgba(201,168,76,0.08); border-color:var(--gold); }
     .gate-tagline {
@@ -747,7 +747,7 @@
     body:not(.descent-active)::after { opacity:0; transition:opacity 1.5s ease; }
   </style>
 </head>
-<body class="gate-active descent-active">
+<body class="gate-active">
 
 <!-- ═══════════════════════════════════════════════════════════════
      DESCENT INTRO — scroll from space to Lazy Lake
@@ -809,7 +809,7 @@
       <img src="photos/lionsgate-crest.jpg" alt="Lionsgate Lion Crest" style="width:100%;height:auto;object-fit:contain;">
     </div>
     <div class="gate-logo">Lionsgate<span>Collaborative Events</span></div>
-    <p class="gate-tagline">A space for what matters</p>
+    <p class="gate-tagline">Where senior people make the decisions they came to make.</p>
     <button id="enter-btn">Enter</button>
   </div>
 </div>
@@ -828,7 +828,7 @@
       </div>
       <p class="hero-eyebrow reveal">Lionsgate · Lazy Lake, Florida</p>
       <h1 class="hero-title reveal reveal-delay-1">
-        A place where perspective shifts —<br>and what matters comes into focus.
+        Eight people. Two acres.<br>One decision that was going to take three months and took a weekend.
       </h1>
       <p class="hero-body reveal reveal-delay-2">
         Lionsgate was created as more than a setting. It is an environment designed to support clarity, connection, and forward movement — whether among colleagues, collaborators, or individuals gathering with <em>intention</em>.
@@ -905,7 +905,7 @@
         <p class="section-label reveal">Landscape · Environment</p>
         <h2 class="reveal reveal-delay-1">Immersion</h2>
       </div>
-      <p class="reveal reveal-delay-2">Every element considered to create an atmosphere of openness and possibility. The environment itself becomes a participant — not a backdrop.</p>
+      <p class="reveal reveal-delay-2">Every element considered to create an atmosphere of openness and possibility.</p>
     </div>
     <div class="immersion-grid">
       <div class="immersion-item reveal">
@@ -1082,8 +1082,7 @@
       <img src="photos/lionsgate-crest.jpg" alt="" aria-hidden="true" style="width:90px;height:auto;object-fit:contain;opacity:0.07;margin:0 auto 2.5rem;display:block;">
       <p class="room-text">
         The space between knowing and arriving<br>
-        is where everything rearranges.<br><br>
-        You paused. The room noticed.
+        is where everything rearranges.
       </p>
     </div>
   </section>
@@ -1156,7 +1155,7 @@
         </div>
 
         <div class="led-block reveal">
-          <p style="font-family:'Cormorant Garamond',serif; font-style:italic; font-size:1.1rem; color:var(--text); line-height:1.8;">Each engagement is different.<br>The common thread is simple: creating the conditions for something meaningful to happen.</p>
+          <p style="font-family:'Cormorant Garamond',serif; font-style:italic; font-size:1.1rem; color:var(--text); line-height:1.8;">The common thread: the people who come here leave having said the thing they'd been circling for months.</p>
         </div>
 
         <div class="led-cta-row reveal reveal-delay-1">
@@ -1175,7 +1174,6 @@
     <div class="pricing-header">
       <p class="section-number reveal">09</p>
       <h2 class="reveal reveal-delay-1">Collaborative Events at Lionsgate</h2>
-      <p class="reveal reveal-delay-2">A place where perspective shifts — and what matters comes into focus.</p>
     </div>
 
     <div style="max-width:680px;margin:0 auto 4rem;text-align:center;" class="reveal">
