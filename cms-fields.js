@@ -1,8 +1,8 @@
 /* Public, safe-to-commit Supabase config. The anon key is read-only by RLS
    (see supabase/schema.sql). NEVER put the service-role key here. The
    operator fills these two after the Supabase project exists (prereq P1). */
-window.CMS_SUPABASE_URL = "__FILL_SUPABASE_URL__";
-window.CMS_SUPABASE_ANON_KEY = "__FILL_SUPABASE_ANON_KEY__";
+window.CMS_SUPABASE_URL = "https://odnzkrgegbqucxqhjdjh.supabase.co";
+window.CMS_SUPABASE_ANON_KEY = "sb_publishable_LIe_2wjmhL4GTcDrwcnKsA_kU-q3Lnq";
 window.CMS_PHOTO_BUCKET = "site-photos";
 
 /* Single source of truth. Each entry:
