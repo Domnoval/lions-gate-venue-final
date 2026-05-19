@@ -86,7 +86,6 @@ window.CMS_FIELDS = [
 
   // key photos
   { path:"photos.essenceBg",    sel:'[data-cms="photos.essenceBg"]',    kind:"image", label:"Essence background", group:"Photos" },
-  { path:"photos.establishing", sel:'[data-cms="photos.establishing"]', kind:"image", label:"Establishing shot",  group:"Photos" },
   { path:"photos.ledHero",      sel:'[data-cms="photos.ledHero"]',      kind:"image", label:"Mark — LED hero",    group:"Photos" },
   { path:"photos.ledPortrait",  sel:'[data-cms="photos.ledPortrait"]',  kind:"image", label:"Mark — portrait",    group:"Photos" },
   { path:"photos.dayImg",       sel:'[data-cms="photos.dayImg"]',       kind:"image", label:"Day/Night — day",    group:"Photos" },
@@ -107,7 +106,7 @@ git commit -m "feat(cms): shared field map + public Supabase config contract"
 - [ ] **Step 3: Controller verification**
 
 Controller runs: `node -e "global.window={};require('./cms-fields.js');console.log(window.CMS_FIELDS.length, window.CMS_FIELDS.every(f=>f.path&&f.sel&&f.kind))"`
-Expected output: `47 true` (3 hero + 6×4 spaces + 3×3 pricing + 2×2 testimonials + 6 photos = 47 entries; every entry well-formed).
+Expected output: `45 true` (3 hero + 6×4 spaces + 3×3 pricing + 2×2 testimonials + 5 photos = 45 entries; every entry well-formed). *(Originally drafted as 46/6-photos with an `establishing` shot — that section's HTML was removed by an earlier "structural cuts" commit and only the CSS remains; corrected here.)*
 
 ---
 
@@ -132,7 +131,7 @@ Each `.pricing-card` i=0..2: `data-cms="pricing.i.name"` on `.pricing-name`, `pr
 
 - [ ] **Step 4: Add the 6 photo hooks**
 
-`data-cms="photos.essenceBg"` on `#essence-bg-img`; `photos.establishing` on the `<img>` in `#establishing .establishing-img`; `photos.ledHero` on `#mark-portrait-hero`; `photos.ledPortrait` on `#mark-portrait-secondary`; `photos.dayImg` on `#dn-day-img`; `photos.nightImg` on `#dn-night-img`.
+`data-cms="photos.essenceBg"` on `#essence-bg-img`; `photos.ledHero` on `#mark-portrait-hero`; `photos.ledPortrait` on `#mark-portrait-secondary`; `photos.dayImg` on `#dn-day-img`; `photos.nightImg` on `#dn-night-img`. *(The `establishing` photo was originally listed here but the section's HTML was removed before this plan was authored — see correction note in Task 1.)*
 
 - [ ] **Step 5: Commit**
 
@@ -151,7 +150,7 @@ Controller: `npx --yes serve -l 8090 .` then Playwright `browser_navigate` to `h
   return { count: els.length, unique: new Set(els).size, sample: els.slice(0,5) };
 }
 ```
-Expected: `count` = 47, `unique` = 47 (every hook present exactly once). Also visually: page renders exactly as before (attributes are inert). No console errors.
+Expected: `count` = 45, `unique` = 45 (every hook present exactly once). Also visually: page renders exactly as before (attributes are inert). No console errors.
 
 ---
 
@@ -285,7 +284,7 @@ Populate every `CMS_FIELDS` text path with the **current hardcoded string from `
   "spaces": [ {"tag":"...","name":"...","desc":"...","img":"https://lionsgatevenue.com/photos/..."}, … 6 ],
   "pricing": [ {"name":"...","desc":"...","rate":"..."}, … 3 ],
   "testimonials": [ {"quote":"...","attribution":"..."}, … 2 ],
-  "photos": { "essenceBg":"https://lionsgatevenue.com/photos/lionsgate-day.jpg", "establishing":"https://lionsgatevenue.com/photos/michael-arrival-path.jpg", "ledHero":"https://lionsgatevenue.com/mark-portrait-hero.png", "ledPortrait":"https://lionsgatevenue.com/mark-portrait-bw.jpg", "dayImg":"https://lionsgatevenue.com/photos/lionsgate-day.jpg", "nightImg":"https://lionsgatevenue.com/photos/michael-pool-twilight.jpg" } }
+  "photos": { "essenceBg":"https://lionsgatevenue.com/photos/lionsgate-day.jpg", "ledHero":"https://lionsgatevenue.com/mark-portrait-hero.png", "ledPortrait":"https://lionsgatevenue.com/mark-portrait-bw.jpg", "dayImg":"https://lionsgatevenue.com/photos/lionsgate-day.jpg", "nightImg":"https://lionsgatevenue.com/photos/michael-pool-twilight.jpg" } }
 ```
 The implementer must read the live strings out of `index.html` for every text path — no paraphrasing. (Headline keeps its line break as a literal `\n`.)
 

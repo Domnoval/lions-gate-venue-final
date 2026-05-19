@@ -70,7 +70,7 @@ fallback), but only the volatile content is wired. Follows the
   "pricing":     [ { "name", "desc", "rate" } x3 ],
   "testimonials":[ { "quote", "attribution" } x2 ],
   "photos": {
-     "essenceBg", "establishing", "ledHero", "ledPortrait",
+     "essenceBg", "ledHero", "ledPortrait",
      "dayImg", "nightImg"
   }
 }

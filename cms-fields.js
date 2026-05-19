@@ -36,7 +36,6 @@ window.CMS_FIELDS = [
   ])),
 
   { path:"photos.essenceBg",    sel:'[data-cms="photos.essenceBg"]',    kind:"image", label:"Essence background", group:"Photos" },
-  { path:"photos.establishing", sel:'[data-cms="photos.establishing"]', kind:"image", label:"Establishing shot",  group:"Photos" },
   { path:"photos.ledHero",      sel:'[data-cms="photos.ledHero"]',      kind:"image", label:"Mark — LED hero",    group:"Photos" },
   { path:"photos.ledPortrait",  sel:'[data-cms="photos.ledPortrait"]',  kind:"image", label:"Mark — portrait",    group:"Photos" },
   { path:"photos.dayImg",       sel:'[data-cms="photos.dayImg"]',       kind:"image", label:"Day/Night — day",    group:"Photos" },
