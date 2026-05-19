@@ -348,6 +348,38 @@
       min-height:1.1em;
     }
 
+    /* ── TASK 6: char counter ── */
+    .cms-counter {
+      font-size:11px;
+      color:var(--text-dim);
+      margin-left:6px;
+    }
+    .cms-counter.over {
+      color:#d98a6a;
+    }
+
+    /* ── TASK 6: per-field revert button ── */
+    .cms-revert {
+      font-size:11px;
+      padding:2px 8px;
+      background:transparent;
+      color:var(--gold-light);
+      border:1px solid var(--border);
+      cursor:pointer;
+      border-radius:2px;
+    }
+    .cms-revert:hover {
+      border-color:var(--gold);
+    }
+
+    /* ── TASK 6: unsaved-changes indicator ── */
+    #unsaved-indicator {
+      font-size:0.72rem;
+      color:#d98a6a;
+      letter-spacing:0.06em;
+      display:none;
+    }
+
     /* ── RESPONSIVE: stack at narrow widths ── */
     @media (max-width:820px) {
       .editor-body {
@@ -406,6 +438,8 @@
     <span class="header-brand">Lionsgate — Content Editor</span>
     <div class="header-right">
       <span id="populating-indicator">Populating defaults…</span>
+      <!-- Task 6: unsaved-changes indicator -->
+      <span id="unsaved-indicator">Unsaved changes</span>
       <!-- Tasks 6/7: publish button goes here -->
       <div id="publish-slot"></div>
       <button id="signout-btn" class="btn-secondary">Sign out</button>
@@ -452,8 +486,87 @@
     window.CMS_SUPABASE_ANON_KEY
   );
 
-  /* ── 2. RECORD STORE ── */
+  /* ── 2. RECORD STORE + DRAFT STATE (Task 6) ── */
   var RECORD = {};
+  var DRAFT  = {};   // working copy; edits go here; RECORD stays immutable until publish
+
+  /** Deep-clone plain JSON objects (no functions/dates/etc.) */
+  function deepClone(o) {
+    return JSON.parse(JSON.stringify(o));
+  }
+
+  /**
+   * setAt(obj, path, val)
+   * Write val into obj at the dot-path. Creates intermediate arrays/objects
+   * on demand: if the NEXT segment is all digits the current node is an array.
+   *   setAt(o, "spaces.3.tag", "x")  →  o.spaces[3].tag = "x"
+   */
+  function setAt(obj, path, val) {
+    var k    = path.split('.');
+    var last = k.pop();
+    var o    = obj;
+    k.forEach(function (p, idx) {
+      var nextSeg = k[idx + 1] || last;
+      if (o[p] == null) {
+        o[p] = /^\d+$/.test(nextSeg) ? [] : {};
+      }
+      o = o[p];
+    });
+    o[last] = val;
+  }
+
+  /**
+   * unsetAt(obj, path)
+   * Delete the leaf key at dot-path from obj (no-op if path doesn't exist).
+   */
+  function unsetAt(obj, path) {
+    var k    = path.split('.');
+    var last = k.pop();
+    var o    = obj;
+    for (var i = 0; i < k.length; i++) {
+      if (o == null) return;
+      o = o[k[i]];
+    }
+    if (o != null) delete o[last];
+  }
+
+  /* ── 2b. LIVE PREVIEW PUSH (Task 6) ── */
+
+  /**
+   * pushDraft()
+   * Posts the current DRAFT to the preview iframe so it can apply the changes
+   * live. Guard: iframe may not be loaded yet — onload retries once if needed.
+   */
+  function pushDraft() {
+    var ifr = window.ADMIN_PREVIEW || document.getElementById('cms-preview');
+    if (!ifr) return;
+    if (!ifr.contentWindow) {
+      // Iframe not yet ready — retry when it loads
+      ifr.addEventListener('load', function () { pushDraft(); }, { once: true });
+      return;
+    }
+    ifr.contentWindow.postMessage({ type: 'cms-draft', draft: DRAFT }, '*');
+  }
+
+  /** Debounced wrapper — waits 150 ms of silence before calling pushDraft() */
+  var _pushTimer = null;
+  function pushDraftDebounced() {
+    if (_pushTimer) clearTimeout(_pushTimer);
+    _pushTimer = setTimeout(pushDraft, 150);
+  }
+
+  /* ── 2c. UNSAVED INDICATOR (Task 6) ── */
+
+  /**
+   * refreshUnsaved()
+   * Shows/hides the "Unsaved changes" label by comparing DRAFT to RECORD.
+   */
+  function refreshUnsaved() {
+    var el = document.getElementById('unsaved-indicator');
+    if (!el) return;
+    var isDirty = JSON.stringify(DRAFT) !== JSON.stringify(RECORD);
+    el.style.display = isDirty ? 'inline' : 'none';
+  }
 
   /* ── 3. VIEW SWITCHES ── */
   var loginView  = document.getElementById('login-view');
@@ -502,7 +615,9 @@
   /**
    * fieldRow(f) → HTMLElement
    * Creates one labeled control for a field. Data-path set for Tasks 6/7.
-   * Renders synchronously with empty/record values, fills defaults async.
+   * Renders synchronously with empty/draft values, fills defaults async.
+   * Task 6: appends char counter (text/multiline with f.max) and a Revert
+   * button to the .row-extras slot.
    */
   function fieldRow(f) {
     var row = document.createElement('div');
@@ -513,7 +628,8 @@
     lbl.setAttribute('for', 'field-' + f.path);
     row.appendChild(lbl);
 
-    var recordVal = window.CMS_GET(RECORD, f.path);
+    // Read from DRAFT (deep-clone of RECORD; may be empty on first load)
+    var draftVal = window.CMS_GET(DRAFT, f.path);
 
     if (f.kind === 'image') {
       var imageWrap = document.createElement('div');
@@ -522,7 +638,7 @@
       var thumb = document.createElement('img');
       thumb.className = 'image-thumb';
       thumb.alt = f.label;
-      thumb.src = recordVal || '';
+      thumb.src = draftVal || '';
       thumb.setAttribute('data-path', f.path);
       thumb.id = 'field-' + f.path;
       imageWrap.appendChild(thumb);
@@ -530,7 +646,7 @@
       var caption = document.createElement('div');
       caption.className = 'image-src-caption';
       caption.id = 'caption-' + f.path;
-      caption.textContent = recordVal || '';
+      caption.textContent = draftVal || '';
       imageWrap.appendChild(caption);
 
       // File input placeholder — Task 7 wires the upload handler
@@ -544,8 +660,8 @@
 
       row.appendChild(imageWrap);
 
-      // Async: fill with live default if record had nothing
-      if (!recordVal) {
+      // Async: fill with live default if draft had nothing
+      if (!draftVal) {
         getDefault(f).then(function (src) {
           if (src && !thumb.src) {
             thumb.src = src;
@@ -559,11 +675,11 @@
       ta.rows = 3;
       ta.id   = 'field-' + f.path;
       ta.setAttribute('data-path', f.path);
-      ta.value = recordVal || '';
+      ta.value = draftVal || '';
       row.appendChild(ta);
 
-      // Async: fill with live default if record had nothing
-      if (!recordVal) {
+      // Async: fill with live default if draft had nothing
+      if (!draftVal) {
         getDefault(f).then(function (txt) {
           if (txt && !ta.value) ta.value = txt;
         });
@@ -575,21 +691,84 @@
       inp.type = 'text';
       inp.id   = 'field-' + f.path;
       inp.setAttribute('data-path', f.path);
-      inp.value = recordVal || '';
+      inp.value = draftVal || '';
       row.appendChild(inp);
 
-      // Async: fill with live default if record had nothing
-      if (!recordVal) {
+      // Async: fill with live default if draft had nothing
+      if (!draftVal) {
         getDefault(f).then(function (txt) {
           if (txt && !inp.value) inp.value = txt;
         });
       }
     }
 
-    // Extension slot — Tasks 6/7 append counter + revert button here
+    // ── Task 6: extension slot — counter + revert ──
     var extras = document.createElement('div');
     extras.className = 'row-extras';
     extras.id = 'extras-' + f.path;
+
+    // Char counter — only for text/multiline fields that declare f.max
+    var counter = null;
+    if ((f.kind === 'text' || f.kind === 'multiline') && f.max) {
+      counter = document.createElement('span');
+      counter.className = 'cms-counter';
+      counter.id = 'counter-' + f.path;
+      var ctrl = document.getElementById('field-' + f.path);
+      var initLen = ctrl ? ctrl.value.length : 0;
+      counter.textContent = initLen + ' / ' + f.max;
+      if (initLen > f.max) {
+        counter.classList.add('over');
+        counter.title = 'May overflow the layout';
+      }
+      extras.appendChild(counter);
+    }
+
+    // Revert button — all fields
+    var revertBtn = document.createElement('button');
+    revertBtn.type = 'button';
+    revertBtn.className = 'cms-revert';
+    revertBtn.textContent = 'Revert';
+    // Capture f and counter in closure
+    (function (field, ctr) {
+      revertBtn.addEventListener('click', function () {
+        // 1. Remove field from DRAFT — loader will fall back to hardcoded default
+        unsetAt(DRAFT, field.path);
+        refreshUnsaved();
+
+        // 2. Restore the visible control
+        if (field.kind === 'image') {
+          getDefault(field).then(function (src) {
+            var th  = document.getElementById('field-' + field.path);
+            var cap = document.getElementById('caption-' + field.path);
+            if (th)  { th.src = src || ''; }
+            if (cap) { cap.textContent = src || ''; }
+            // 4. Push updated draft to preview iframe
+            pushDraft();
+          });
+        } else {
+          getDefault(field).then(function (txt) {
+            var ctrl = document.getElementById('field-' + field.path);
+            if (ctrl) ctrl.value = txt || '';
+            // 3. Refresh counter if present
+            if (ctr && field.max) {
+              var n = (txt || '').length;
+              ctr.textContent = n + ' / ' + field.max;
+              if (n > field.max) {
+                ctr.classList.add('over');
+                ctr.title = 'May overflow the layout';
+              } else {
+                ctr.classList.remove('over');
+                ctr.title = '';
+              }
+            }
+            // 4. Push updated draft to preview iframe
+            pushDraft();
+          });
+        }
+      });
+    }(f, counter));
+
+    extras.appendChild(revertBtn);
     row.appendChild(extras);
 
     return row;
@@ -647,12 +826,21 @@
       .then(function (res) {
         var data = res.data;
         RECORD = (data && data.content) || {};
+        // Task 6: initialise working draft from the freshly-fetched record
+        DRAFT = deepClone(RECORD);
+        refreshUnsaved();
         renderForm();
+        // Push current DRAFT to preview once iframe is ready
+        // (iframeReady guard: if still loading, pushDraft retries on load)
+        pushDraft();
       })
       .catch(function () {
         // Row doesn't exist yet — treat as empty record
         RECORD = {};
+        DRAFT  = {};
+        refreshUnsaved();
         renderForm();
+        pushDraft();
       });
   }
 
@@ -740,13 +928,62 @@
     // onAuthStateChange fires → showLogin()
   });
 
-  /* ── 10. EXTENSION HOOKS (Tasks 6/7 attach here) ── */
+  /* ── 10. TASK 6: FORM INPUT → DRAFT + COUNTER + PREVIEW ── */
+
+  /**
+   * Global input handler on the cms-form.
+   * - Writes the changed value into DRAFT at the field's dot-path.
+   * - Updates the char counter for that field (if it has one).
+   * - Debounces pushDraft() so the iframe isn't spammed on every keystroke.
+   * - Refreshes the "Unsaved changes" indicator.
+   *
+   * Image file inputs are intentionally skipped here (upload is Task 7).
+   */
+  document.getElementById('cms-form').addEventListener('input', function (e) {
+    var ctrl = e.target;
+    var path = ctrl.getAttribute('data-path');
+    if (!path) return;                          // not a CMS control
+    if (ctrl.type === 'file') return;           // image upload — Task 7 only
+
+    var val = ctrl.value;
+
+    // Write into working draft
+    setAt(DRAFT, path, val);
+
+    // Update char counter if present
+    var ctr = document.getElementById('counter-' + path);
+    if (ctr) {
+      // Find the field definition to get f.max
+      var field = null;
+      for (var i = 0; i < window.CMS_FIELDS.length; i++) {
+        if (window.CMS_FIELDS[i].path === path) { field = window.CMS_FIELDS[i]; break; }
+      }
+      if (field && field.max) {
+        var n = val.length;
+        ctr.textContent = n + ' / ' + field.max;
+        if (n > field.max) {
+          ctr.classList.add('over');
+          ctr.title = 'May overflow the layout';
+        } else {
+          ctr.classList.remove('over');
+          ctr.title = '';
+        }
+      }
+    }
+
+    refreshUnsaved();
+    pushDraftDebounced();
+  });
+
+  /* ── 11. EXTENSION HOOKS (Tasks 6/7 attach here) ── */
   /**
    * window.ADMIN_RECORD  — live reference to the current record object.
+   * window.ADMIN_DRAFT   — live reference to the working draft (Task 6).
    * window.ADMIN_SB      — the supabase client for Tasks 6/7.
    * window.ADMIN_RELOAD  — call to re-fetch and re-render form.
    * window.ADMIN_PREVIEW — reference to the preview iframe element.
    * window.ADMIN_RENDER  — call renderForm() after mutating ADMIN_RECORD.
+   * window.ADMIN_PUSH_DRAFT — call pushDraft() from Task 7 after publish.
    */
   window.ADMIN_SB      = sb;
   window.ADMIN_PREVIEW = iframe;
@@ -759,7 +996,17 @@
     get: function () { return RECORD; },
     set: function (v) { RECORD = v; }
   });
-  window.ADMIN_RENDER = renderForm;
+  // Task 6: expose DRAFT similarly so Task 7 can reset it after publish
+  Object.defineProperty(window, 'ADMIN_DRAFT', {
+    get: function () { return DRAFT; },
+    set: function (v) { DRAFT = v; }
+  });
+  window.ADMIN_RENDER     = renderForm;
+  window.ADMIN_PUSH_DRAFT = pushDraft;      // Task 7 calls this after publish
+  window.ADMIN_SET_AT     = setAt;          // exposed for Task 7 image upload
+  window.ADMIN_UNSET_AT   = unsetAt;
+  window.ADMIN_DEEP_CLONE = deepClone;
+  window.ADMIN_REFRESH_UNSAVED = refreshUnsaved;
 
 })();
 </script>
