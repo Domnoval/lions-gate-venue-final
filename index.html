@@ -17,8 +17,8 @@
       --surface: #111009;
       --surface-2: #1a1610;
       --text: #e8dcc8;
-      --text-dim: rgba(232,220,200,0.55);
-      --text-muted: rgba(232,220,200,0.28);
+      --text-dim: rgba(232,220,200,0.74);
+      --text-muted: rgba(232,220,200,0.45);
       --atmo-primary: #c9a84c;
       --atmo-bg: #0a0906;
       --atmo-accent: rgba(201,168,76,0.1);
@@ -80,7 +80,6 @@
       font-size:1rem; color:var(--text-dim); letter-spacing:0.05em;
     }
 
-    /* ── POLAROID ZOOM INTRO ── */
     /* ── ESTABLISHING SHOT ── */
     #establishing { background:#000; }
     .establishing-img { position:relative; height:72vh; min-height:420px; overflow:hidden; }
@@ -129,7 +128,11 @@
       font-family:'Cormorant Garamond',serif; font-weight:400;
       font-size:clamp(1.3rem,2.2vw,1.75rem); letter-spacing:0.05em; color:var(--text);
     }
-    p { font-size:0.92rem; font-weight:300; line-height:1.82; color:var(--text-dim); }
+    p { font-size:1rem; font-weight:300; line-height:1.82; color:var(--text-dim); }
+    a:focus-visible, button:focus-visible, input:focus-visible,
+    select:focus-visible, textarea:focus-visible {
+      outline:2px solid var(--gold); outline-offset:3px;
+    }
     em { font-style:italic; }
 
     .gold-rule { width:55px; height:1px; background:linear-gradient(to right, var(--gold), transparent); margin:1.8rem 0; }
@@ -500,6 +503,15 @@
       cursor:pointer; transition:all 0.4s ease; margin-top:0.8rem;
     }
     .submit-btn:hover { background:rgba(201,168,76,0.08); border-color:var(--gold); }
+    .submit-btn[disabled] { opacity:0.5; cursor:default; }
+    .form-status {
+      text-align:center; font-family:'Cormorant Garamond',serif; font-style:italic;
+      font-size:1rem; line-height:1.7; margin-top:0.5rem; min-height:1.2em;
+      transition:opacity 0.4s ease;
+    }
+    .form-status.ok    { color:var(--gold-light); }
+    .form-status.error { color:#d98a6a; }
+    .form-status a { color:inherit; }
 
     /* ── FOOTER ── */
     footer {
@@ -548,248 +560,9 @@
       .arch-grid { grid-template-columns:1fr; }
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       DESCENT INTRO — scroll-driven video descent from space
-       Plays before the Gate. On "Enter", fades out → reveals Gate.
-       All selectors namespaced #descent-* to avoid collisions.
-       ═══════════════════════════════════════════════════════════════ */
-    body.descent-active { overflow:hidden !important; background:#000 !important; }
-    body.descent-active::after {
-      content:''; position:fixed; inset:0; z-index:1210;
-      pointer-events:none; opacity:0.5;
-      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
-    }
-    #descent-canvas {
-      position:fixed; inset:0; width:100%; height:100%;
-      z-index:1100; pointer-events:none;
-      transition:opacity 2s ease;
-      background:#000; display:block;
-    }
-    #descent-loader {
-      position:fixed; inset:0; z-index:1200; background:#000;
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:28px; transition:opacity 1.2s ease;
-    }
-    #descent-loader.hidden { opacity:0; pointer-events:none; }
-    .descent-loader-name {
-      font-size:clamp(1.5rem,4vw,3rem);
-      letter-spacing:0.5em;
-      color:rgba(200,168,76,0.5);
-      font-weight:300;
-      font-family:'Cormorant Garamond', serif;
-    }
-    .descent-loader-bar-wrap {
-      width:200px; height:1px;
-      background:rgba(200,168,76,0.15);
-      position:relative; overflow:hidden;
-    }
-    .descent-loader-bar-fill {
-      position:absolute; top:0; left:-100%;
-      width:100%; height:100%;
-      background:linear-gradient(to right, transparent, #c9a84c, #f0c96b, #c9a84c, transparent);
-      animation:descentLoaderSweep 1.4s ease-in-out infinite;
-    }
-    @keyframes descentLoaderSweep { 0%{left:-100%;} 100%{left:100%;} }
-    .descent-loader-label {
-      font-size:8px; letter-spacing:0.7em;
-      color:rgba(200,168,76,0.3);
-      text-transform:uppercase;
-      font-family:'Cormorant Garamond', serif;
-      font-style:italic;
-    }
-    #descent-vignette {
-      position:fixed; inset:0; z-index:1105;
-      background:radial-gradient(ellipse 75% 75% at 50% 50%,
-        transparent 0%, rgba(0,0,0,0.55) 100%);
-      pointer-events:none;
-      transition:opacity 2s ease;
-    }
-    #descent-progress-bar {
-      position:fixed; bottom:0; left:0;
-      height:1px; width:0%;
-      background:linear-gradient(to right,
-        transparent, #7a6230, #c9a84c, #f0c96b, #c9a84c, #7a6230, transparent);
-      z-index:1120; transition:width 0.05s linear, opacity 1.2s ease;
-    }
-    #descent-coords {
-      position:fixed; top:28px; left:32px;
-      z-index:1120; line-height:2;
-      font-family:'Cormorant Garamond', serif;
-      font-style:italic; font-size:10px;
-      letter-spacing:0.3em;
-      color:rgba(200,168,76,0.45);
-      transition:color 1.5s ease, opacity 1.5s ease;
-    }
-    #descent-coords.locked { color:rgba(200,168,76,0.8); }
-    #descent-phase-wrap {
-      position:fixed; top:28px; right:32px;
-      z-index:1120; text-align:right; line-height:2;
-      transition:opacity 1.5s ease;
-    }
-    #descent-phase-text {
-      font-size:8px; letter-spacing:0.55em;
-      color:rgba(200,168,76,0.45);
-      text-transform:uppercase;
-      font-family:'Cormorant Garamond', serif;
-    }
-    #descent-phase-sub {
-      font-size:7px; letter-spacing:0.4em;
-      color:rgba(200,168,76,0.2);
-      text-transform:uppercase;
-      font-family:'Cormorant Garamond', serif;
-      font-style:italic;
-    }
-    #descent-scroll-hint {
-      position:fixed; bottom:44px; left:50%;
-      transform:translateX(-50%); z-index:1120;
-      display:flex; flex-direction:column; align-items:center;
-      gap:10px; pointer-events:none;
-      transition:opacity 0.8s ease;
-    }
-    #descent-scroll-hint .descent-lbl {
-      font-size:8px; letter-spacing:0.65em;
-      color:rgba(200,168,76,0.55);
-      text-transform:uppercase;
-      font-family:'Cormorant Garamond', serif;
-    }
-    #descent-scroll-hint .descent-line {
-      width:1px; height:38px;
-      background:linear-gradient(to bottom, rgba(200,168,76,0.55), transparent);
-      animation:descentLinePulse 2.2s ease-in-out infinite;
-    }
-    @keyframes descentLinePulse {
-      0%,100%{opacity:0.4; transform:scaleY(1);}
-      50%{opacity:1; transform:scaleY(1.2);}
-    }
-    #descent-arrival-ui {
-      position:fixed; top:50%; left:50%;
-      transform:translate(-50%,-50%); z-index:1125;
-      text-align:center; opacity:0; pointer-events:none;
-      transition:opacity 1.8s ease;
-    }
-    .descent-arrive-eyebrow {
-      font-size:8px; letter-spacing:0.9em;
-      color:rgba(200,168,76,0.5);
-      text-transform:uppercase;
-      margin-bottom:18px;
-      font-family:'Cormorant Garamond', serif;
-      font-style:italic;
-    }
-    .descent-arrive-name {
-      font-size:clamp(3.5rem,8vw,7rem);
-      color:#f0c96b;
-      letter-spacing:0.3em;
-      font-weight:300;
-      font-family:'Cormorant Garamond', serif;
-      text-shadow:
-        0 0 40px rgba(200,168,76,0.9),
-        0 0 100px rgba(200,168,76,0.4),
-        0 0 200px rgba(200,168,76,0.15);
-      animation:descentNameGlow 3s ease-in-out infinite;
-    }
-    .descent-arrive-coords {
-      margin-top:18px; font-size:9px;
-      letter-spacing:0.45em;
-      color:rgba(200,168,76,0.35);
-      font-family:'Cormorant Garamond', serif;
-      font-style:italic;
-    }
-    @keyframes descentNameGlow {
-      0%,100%{ text-shadow: 0 0 30px rgba(200,168,76,0.7), 0 0 80px rgba(200,168,76,0.3); }
-      50%    { text-shadow: 0 0 60px rgba(200,168,76,1),   0 0 140px rgba(200,168,76,0.5), 0 0 240px rgba(200,168,76,0.15); }
-    }
-    #descent-enter-btn {
-      position:fixed; bottom:56px; left:50%;
-      transform:translateX(-50%); z-index:1130;
-      background:none;
-      border:1px solid rgba(200,168,76,0.35);
-      color:rgba(200,168,76,0.65);
-      font-family:'Outfit', sans-serif;
-      font-size:8px; letter-spacing:0.75em;
-      padding:16px 44px; cursor:pointer;
-      text-transform:uppercase;
-      opacity:0; pointer-events:none;
-      transition:opacity 1.2s ease, background 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s;
-    }
-    #descent-enter-btn.visible { opacity:1; pointer-events:auto; }
-    #descent-enter-btn:hover {
-      background:rgba(200,168,76,0.07);
-      color:rgba(200,168,76,1);
-      border-color:rgba(200,168,76,0.75);
-      box-shadow:0 0 32px rgba(200,168,76,0.2), inset 0 0 16px rgba(200,168,76,0.05);
-    }
-    #descent-skip-btn {
-      position:fixed; top:22px; left:50%;
-      transform:translateX(-50%); z-index:1130;
-      background:none; border:none;
-      color:rgba(200,168,76,0.2);
-      font-family:'Outfit', sans-serif;
-      font-size:7px; letter-spacing:0.5em;
-      text-transform:uppercase;
-      cursor:pointer; padding:8px 20px;
-      transition:color 0.3s, opacity 0.5s;
-    }
-    #descent-skip-btn:hover { color:rgba(200,168,76,0.55); }
-
-    /* When descent done, fade out all descent elements */
-    body:not(.descent-active) #descent-loader,
-    body:not(.descent-active) #descent-canvas,
-    body:not(.descent-active) #descent-vignette,
-    body:not(.descent-active) #descent-coords,
-    body:not(.descent-active) #descent-phase-wrap,
-    body:not(.descent-active) #descent-progress-bar,
-    body:not(.descent-active) #descent-scroll-hint,
-    body:not(.descent-active) #descent-arrival-ui,
-    body:not(.descent-active) #descent-enter-btn,
-    body:not(.descent-active) #descent-skip-btn {
-      opacity:0 !important; pointer-events:none !important;
-    }
-    body:not(.descent-active)::after { opacity:0; transition:opacity 1.5s ease; }
   </style>
 </head>
 <body class="gate-active">
-
-<!-- ═══════════════════════════════════════════════════════════════
-     DESCENT INTRO — scroll from space to Lazy Lake
-     ═══════════════════════════════════════════════════════════════ -->
-
-
-<div id="descent-loader">
-  <div class="descent-loader-name">LIONSGATE</div>
-  <div class="descent-loader-bar-wrap"><div class="descent-loader-bar-fill"></div></div>
-  <div class="descent-loader-label">Loading descent sequence</div>
-</div>
-
-<canvas id="descent-canvas"></canvas>
-
-<div id="descent-vignette"></div>
-
-<div id="descent-coords">
-  <div id="descent-coord-alt">ALT  ·  ∞</div>
-  <div id="descent-coord-lat">LAT  ·  26.1945° N</div>
-  <div id="descent-coord-lon">LON  ·  80.1328° W</div>
-</div>
-
-<div id="descent-phase-wrap">
-  <div id="descent-phase-text">PILLARS OF CREATION</div>
-  <div id="descent-phase-sub">NEBULA NGC 6611</div>
-</div>
-
-<div id="descent-progress-bar"></div>
-
-<div id="descent-scroll-hint">
-  <div class="descent-lbl">Scroll to Descend</div>
-  <div class="descent-line"></div>
-</div>
-
-<div id="descent-arrival-ui">
-  <div class="descent-arrive-eyebrow">You have arrived</div>
-  <div class="descent-arrive-name">LIONSGATE</div>
-  <div class="descent-arrive-coords">26.1945° N &nbsp;·&nbsp; 80.1328° W &nbsp;·&nbsp; Lazy Lake, Florida</div>
-</div>
-
-<button id="descent-enter-btn">Enter &nbsp;↓</button>
-<button id="descent-skip-btn">Skip Intro</button>
 
 <!-- ── MOBILE NAV ── -->
 <nav class="mobile-nav">
@@ -1121,17 +894,17 @@
       <div class="pricing-card reveal">
         <h3 class="pricing-name">Private Use</h3>
         <p class="pricing-desc">Use the space as your own — bring your people, your purpose, and let the environment do its work. Includes full property access: the Skydeck, Al Fresco, the Table, the Center, the Flame, the Margins. The setting shapes the conversation. You guide it.</p>
-        <p class="pricing-range">Engagements typically begin in the low four-figure range</p>
+        <p class="pricing-range">A day rate, scoped to your gathering. Shared directly when we speak.</p>
       </div>
       <div class="pricing-card reveal reveal-delay-1">
         <h3 class="pricing-name">Curated Experience</h3>
         <p class="pricing-desc">A more intentional shaping of the day — how conversations flow, where energy gathers, and how the space supports it. Structure meets spontaneity.</p>
-        <p class="pricing-range">Most engagements fall within the mid four-figure to low five-figure range</p>
+        <p class="pricing-range">Priced for the day we design together. Discussed when we speak.</p>
       </div>
       <div class="pricing-card reveal reveal-delay-2">
         <h3 class="pricing-name">Facilitated Sessions</h3>
         <p class="pricing-desc">For those seeking deeper clarity or alignment. Direct work with Mark to surface what matters, refine direction, and move things forward.</p>
-        <p class="pricing-range">Comprehensive engagements are typically in the five-figure range</p>
+        <p class="pricing-range">A bespoke engagement with Mark. Defined around what you need.</p>
       </div>
     </div>
 
@@ -1163,7 +936,8 @@
       There are moments when a change in setting changes everything.<br>
       This is one of those places.
     </p>
-    <form class="contact-form reveal" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+    <form id="contact-form" class="contact-form reveal" name="contact" method="POST"
+          action="/" data-netlify="true" netlify-honeypot="bot-field">
       <input type="hidden" name="form-name" value="contact">
       <p style="position:absolute;left:-9999px;" aria-hidden="true"><label>Don't fill this out if you're human: <input name="bot-field"></label></p>
       <div class="form-row">
@@ -1201,6 +975,13 @@
         <textarea id="message" name="message" rows="4"></textarea>
       </div>
       <button type="submit" class="submit-btn">Send Inquiry</button>
+      <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+      <noscript>
+        <p class="form-status" style="opacity:1;">
+          If the form does not respond, email
+          <a href="mailto:CONTACT_EMAIL_PLACEHOLDER">us</a> directly.
+        </p>
+      </noscript>
     </form>
   </section>
 
@@ -1351,215 +1132,50 @@ if(dnHandle&&dnCont){
   obs.observe(roomSection);
 })();
 
-/* ── MARK PORTRAIT — fix local path for deployment ── */
-// When deployed, replace local paths with hosted URLs
-document.addEventListener('DOMContentLoaded',()=>{
-  const heroImg = document.getElementById('mark-portrait-hero');
-  const secImg  = document.getElementById('mark-portrait-secondary');
-  // These paths work locally; swap to hosted URLs when deploying to Hostinger
-});
-
-/* ═══════════════════════════════════════════════════════════════
-   DESCENT INTRO — scroll-driven JPEG frame sequence on canvas.
-   Frames live in /frames/ (121 JPEGs, 1920w, extracted at 24fps).
-   Replaces the <video>+currentTime-scrub pattern because the source
-   mp4 has only 1 keyframe — every seek stalled the decoder.
-   On "Enter" click, fades out and reveals Gate.
-   ═══════════════════════════════════════════════════════════════ */
+/* -- CONTACT FORM -- Netlify AJAX submit with visible success/error -- */
 (function(){
-  const canvas    = document.getElementById('descent-canvas');
-  const ctx       = canvas && canvas.getContext('2d', { alpha:false });
-  const loader    = document.getElementById('descent-loader');
-  const pBar      = document.getElementById('descent-progress-bar');
-  const hintEl    = document.getElementById('descent-scroll-hint');
-  const arrUI     = document.getElementById('descent-arrival-ui');
-  const enterBtn  = document.getElementById('descent-enter-btn');
-  const skipBtn   = document.getElementById('descent-skip-btn');
-  const coordsEl  = document.getElementById('descent-coords');
-  const phaseText = document.getElementById('descent-phase-text');
-  const phaseSub  = document.getElementById('descent-phase-sub');
-  const coordAlt  = document.getElementById('descent-coord-alt');
-
-  if(!canvas || !ctx) return;
-  // Phase-1 cut: descent intro is no longer activated. Without the descent
-  // ever firing, `unlocked` would stay false forever and the wheel/touchmove
-  // listeners below would permanently block scrolling. Bail early when the
-  // descent isn't activated by the body class.
-  if(!document.body.classList.contains('descent-active')) return;
-
-  const FRAME_COUNT  = 121;  // 5.04s × 24fps
-  const FRAME_PATH   = i => `frames/f${String(i+1).padStart(4,'0')}.jpg`;
-  const SCROLL_TOTAL = 6000;
-
-  let progress = 0, target = 0;
-  let ready = false, arrived = false, unlocked = false;
-  const frames = new Array(FRAME_COUNT);
-  let loadedCount = 0;
-  let lastDrawnIdx = -1;
-
-  function resize(){
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width  = Math.floor(innerWidth  * dpr);
-    canvas.height = Math.floor(innerHeight * dpr);
-    ctx.imageSmoothingQuality = 'high';
-    lastDrawnIdx = -1;
+  var form = document.getElementById('contact-form');
+  var statusEl = document.getElementById('form-status');
+  if(!form || !statusEl) return;
+  /* TODO Mark: replace with the real inquiry inbox (also set this as the
+     Netlify Forms notification email in the Netlify dashboard). */
+  var CONTACT_EMAIL = 'CONTACT_EMAIL_PLACEHOLDER';
+  var btn = form.querySelector('.submit-btn');
+  function encode(d){
+    var a=[]; for(var k in d){ if(d.hasOwnProperty(k)){
+      a.push(encodeURIComponent(k)+'='+encodeURIComponent(d[k])); } }
+    return a.join('&');
   }
-  window.addEventListener('resize', resize);
-  resize();
-
-  function drawFrame(idx){
-    const img = frames[idx];
-    if(!img || !img.complete || img.naturalWidth === 0) return;
-    const cw = canvas.width, ch = canvas.height;
-    const iw = img.naturalWidth, ih = img.naturalHeight;
-    const s  = Math.max(cw / iw, ch / ih);
-    const dw = iw * s, dh = ih * s;
-    const dx = (cw - dw) * 0.5, dy = (ch - dh) * 0.5;
-    ctx.drawImage(img, dx, dy, dw, dh);
-    lastDrawnIdx = idx;
-  }
-
-  function preload(){
-    const CONCURRENCY = 8;
-    let next = 0;
-    function loadOne(){
-      if(next >= FRAME_COUNT) return;
-      const i = next++;
-      const img = new Image();
-      img.decoding = 'async';
-      img.onload = img.onerror = () => {
-        loadedCount++;
-        if(i === 0) drawFrame(0);
-        if(loadedCount === FRAME_COUNT) onReady();
-        loadOne();
-      };
-      img.src = FRAME_PATH(i);
-      frames[i] = img;
-    }
-    for(let k = 0; k < CONCURRENCY; k++) loadOne();
-  }
-
-  function onReady(){
-    if(ready) return;
-    ready = true;
-    if(loader){
-      loader.classList.add('hidden');
-      setTimeout(()=>{ loader.style.display = 'none'; }, 1400);
+  function done(ok){
+    if(btn) btn.removeAttribute('disabled');
+    if(ok){
+      form.reset();
+      statusEl.className='form-status ok';
+      statusEl.textContent='Thank you - your inquiry is in. Mark will respond personally within 24 hours.';
+    } else {
+      statusEl.className='form-status error';
+      statusEl.innerHTML='Something went wrong sending this. Please email '+
+        '<a href="mailto:'+CONTACT_EMAIL+'">us</a> directly.';
     }
   }
-
-  // B2 fix: absolute 8s fallback — if preload stalls, mark ready AND surface
-  // the Enter button so the user is never stuck staring at a loader.
-  setTimeout(()=>{
-    if(!ready){
-      onReady();
-      arrived = true;
-      if(enterBtn) enterBtn.classList.add('visible');
-      if(skipBtn)  skipBtn.style.opacity = '0';
-    }
-  }, 8000);
-
-  preload();
-
-  window.addEventListener('wheel', e => {
-    if(unlocked) return;
+  form.addEventListener('submit', function(e){
     e.preventDefault();
-    target = Math.max(0, Math.min(1, target + e.deltaY / SCROLL_TOTAL));
-  }, { passive:false });
-
-  let lastTY = 0;
-  window.addEventListener('touchstart', e => { lastTY = e.touches[0].clientY; }, { passive:true });
-  window.addEventListener('touchmove', e => {
-    if(unlocked) return;
-    e.preventDefault();
-    const dy = lastTY - e.touches[0].clientY;
-    lastTY = e.touches[0].clientY;
-    target = Math.max(0, Math.min(1, target + dy / (SCROLL_TOTAL * 0.3)));
-  }, { passive:false });
-
-  window.addEventListener('keydown', e => {
-    if(unlocked) return;
-    if(['ArrowDown','PageDown',' '].includes(e.key)){
-      e.preventDefault();
-      target = Math.min(1, target + 0.04);
-    }
-    if(['ArrowUp','PageUp'].includes(e.key)){
-      e.preventDefault();
-      target = Math.max(0, target - 0.04);
-    }
+    var hp = form.querySelector('[name="bot-field"]');
+    if(hp && hp.value) return;            /* honeypot tripped - silently drop */
+    var fd = new FormData(form), data = {};
+    fd.forEach(function(v,k){ data[k]=v; });
+    data['form-name']='contact';
+    statusEl.className='form-status';
+    statusEl.textContent='Sending...';
+    if(btn) btn.setAttribute('disabled','disabled');
+    fetch('/', {
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: encode(data)
+    }).then(function(r){ done(!!r && r.ok); },
+            function(){ done(false); });
   });
-
-  if(skipBtn)  skipBtn.addEventListener('click',  ()=>{ target = 1; });
-  if(enterBtn) enterBtn.addEventListener('click', doDescentUnlock);
-
-  function doDescentUnlock(){
-    if(unlocked) return;
-    unlocked = true;
-    document.body.classList.remove('descent-active');
-    setTimeout(()=>{ for(let i = 0; i < frames.length; i++) frames[i] = null; }, 2100);
-    // Let the LIONSGATE brand breathe through the descent fade, then auto-open
-    // the gate — no second Enter click needed.
-    setTimeout(()=>window.dispatchEvent(new CustomEvent('lg:open-gate')), 800);
-  }
-
-  const phases = [
-    { at:0.00, text:'PILLARS OF CREATION', sub:'NEBULA NGC 6611',            alt:'∞',          lock:false },
-    { at:0.12, text:'DEEP SPACE',          sub:'DEPARTURE FROM THE NEBULA',  alt:'6,500 ly',   lock:false },
-    { at:0.28, text:'APPROACHING EARTH',   sub:'SOLAR SYSTEM',               alt:'80,000 km',  lock:false },
-    { at:0.42, text:'EARTH ORBIT',         sub:'UPPER ATMOSPHERE',           alt:'35,000 km',  lock:false },
-    { at:0.56, text:'COORDINATES LOCKED',  sub:'SOUTH FLORIDA',              alt:'800 km',     lock:true  },
-    { at:0.70, text:'DESCENDING',          sub:'BROWARD COUNTY',             alt:'4.2 km',     lock:true  },
-    { at:0.83, text:'FINAL APPROACH',      sub:'LAZY LAKE — PROPERTY FOUND', alt:'320 m',      lock:true  },
-    { at:0.94, text:'ARRIVAL',             sub:'LIONSGATE',                  alt:'45 m',       lock:true  }
-  ];
-
-  let lastPhaseIdx = -1, lastBarPct = -1, lastHintOpa = -1, lastArrOpa = -1;
-  let lastT = performance.now();
-
-  function tick(now){
-    requestAnimationFrame(tick);
-    if(unlocked) return;
-    const dt = Math.min((now - lastT) / 1000, 0.05);
-    lastT = now;
-    const speed = 0.06;
-    progress += (target - progress) * (1 - Math.pow(1 - speed, dt * 60));
-
-    if(!ready) return;
-
-    const idx = Math.max(0, Math.min(FRAME_COUNT - 1, Math.round(progress * (FRAME_COUNT - 1))));
-    if(idx !== lastDrawnIdx) drawFrame(idx);
-
-    const barPct = Math.round(progress * 1000) / 10;
-    if(barPct !== lastBarPct){ pBar.style.width = barPct + '%'; lastBarPct = barPct; }
-
-    const hintOpa = Math.max(0, 1 - progress * 6);
-    if(Math.abs(hintOpa - lastHintOpa) > 0.01){ hintEl.style.opacity = hintOpa.toString(); lastHintOpa = hintOpa; }
-
-    let phaseIdx = 0;
-    for(let i = 0; i < phases.length; i++){ if(progress >= phases[i].at) phaseIdx = i; else break; }
-    if(phaseIdx !== lastPhaseIdx){
-      const ph = phases[phaseIdx];
-      phaseText.textContent = ph.text;
-      phaseSub.textContent  = ph.sub;
-      coordAlt.textContent  = 'ALT  ·  ' + ph.alt;
-      if(ph.lock) coordsEl.classList.add('locked');
-      lastPhaseIdx = phaseIdx;
-    }
-
-    if(progress > 0.88){
-      const a = Math.min(1, (progress - 0.88) / 0.1);
-      if(Math.abs(a - lastArrOpa) > 0.01){ arrUI.style.opacity = a.toString(); lastArrOpa = a; }
-    }
-    // B3 fix: also reveal Enter when target is 1 even if easing hasn't settled
-    if((progress >= 0.99 || target >= 1) && !arrived){
-      arrived = true;
-      if(enterBtn) enterBtn.classList.add('visible');
-      if(skipBtn)  skipBtn.style.opacity = '0';
-    }
-  }
-  requestAnimationFrame(tick);
 })();
 </script>
 </body>
 </html>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         

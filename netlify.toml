@@ -1,0 +1,19 @@
+# Static site — served from repo root, no build step.
+# Netlify Forms: the contact form is detected automatically at deploy time
+# from the static HTML `data-netlify="true"` attribute. After the first
+# deploy, set the notification email under Netlify → Forms → Settings.
+
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/photos/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
