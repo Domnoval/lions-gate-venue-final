@@ -106,7 +106,7 @@ git commit -m "feat(cms): shared field map + public Supabase config contract"
 - [ ] **Step 3: Controller verification**
 
 Controller runs: `node -e "global.window={};require('./cms-fields.js');console.log(window.CMS_FIELDS.length, window.CMS_FIELDS.every(f=>f.path&&f.sel&&f.kind))"`
-Expected output: `45 true` (3 hero + 6×4 spaces + 3×3 pricing + 2×2 testimonials + 5 photos = 45 entries; every entry well-formed). *(Originally drafted as 46/6-photos with an `establishing` shot — that section's HTML was removed by an earlier "structural cuts" commit and only the CSS remains; corrected here.)*
+Expected output: `42 true` (2 hero + 6×4 spaces + 3×3 pricing + 2×1 testimonials + 5 photos = 42 entries; every entry well-formed). *(Originally drafted as 46/6-photos with an `establishing` shot — corrected to 45 after structural cuts. Corrected again to 42 in code-review pass C1: hero.body, testimonials.0.attribution, and testimonials.1.attribution dropped because they contain inline HTML that textContent silently strips.)*
 
 ---
 
@@ -150,7 +150,7 @@ Controller: `npx --yes serve -l 8090 .` then Playwright `browser_navigate` to `h
   return { count: els.length, unique: new Set(els).size, sample: els.slice(0,5) };
 }
 ```
-Expected: `count` = 45, `unique` = 45 (every hook present exactly once). Also visually: page renders exactly as before (attributes are inert). No console errors.
+Expected: `count` = 42, `unique` = 42 (every hook present exactly once). Also visually: page renders exactly as before (attributes are inert). No console errors. *(C1 fix: count corrected from 45 to 42.)*
 
 ---
 
@@ -278,13 +278,13 @@ create policy "photos auth update" on storage.objects
 
 - [ ] **Step 2: `supabase/seed-content.json`** — today's exact content (so seeding is byte-identical)
 
-Populate every `CMS_FIELDS` text path with the **current hardcoded string from `index.html`** and every image path with the current `photos/…`-relative path resolved to an absolute `https://lionsgatevenue.com/...` URL (so the seeded record reproduces today's site exactly). Structure:
+Populate every `CMS_FIELDS` text path with the **current hardcoded string from `index.html`** and every image path with the **origin-relative path the HTML already uses** (e.g. `photos/lionsgate-day.jpg`, `mark-portrait-hero.png`). Origin-relative is safe both before and after the DNS cutover and matches what the HTML serves today; operator-uploaded photos will naturally be absolute Supabase Storage URLs instead. Structure:
 ```json
 { "hero": { "eyebrow": "...", "headline": "...", "body": "..." },
   "spaces": [ {"tag":"...","name":"...","desc":"...","img":"https://lionsgatevenue.com/photos/..."}, … 6 ],
   "pricing": [ {"name":"...","desc":"...","rate":"..."}, … 3 ],
   "testimonials": [ {"quote":"...","attribution":"..."}, … 2 ],
-  "photos": { "essenceBg":"https://lionsgatevenue.com/photos/lionsgate-day.jpg", "ledHero":"https://lionsgatevenue.com/mark-portrait-hero.png", "ledPortrait":"https://lionsgatevenue.com/mark-portrait-bw.jpg", "dayImg":"https://lionsgatevenue.com/photos/lionsgate-day.jpg", "nightImg":"https://lionsgatevenue.com/photos/michael-pool-twilight.jpg" } }
+  "photos": { "essenceBg":"photos/lionsgate-day.jpg", "ledHero":"mark-portrait-hero.png", "ledPortrait":"mark-portrait-bw.jpg", "dayImg":"photos/lionsgate-day.jpg", "nightImg":"photos/michael-pool-twilight.jpg" } }
 ```
 The implementer must read the live strings out of `index.html` for every text path — no paraphrasing. (Headline keeps its line break as a literal `\n`.)
 

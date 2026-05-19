@@ -539,8 +539,9 @@
   );
 
   /* ── 2. RECORD STORE + DRAFT STATE (Task 6) ── */
-  var RECORD = {};
-  var DRAFT  = {};   // working copy; edits go here; RECORD stays immutable until publish
+  var RECORD   = {};
+  var DRAFT    = {};   // working copy; edits go here; RECORD stays immutable until publish
+  var DEFAULTS = new Map(); // C2: original iframe values captured at load, before any pushDraft
 
   /** Deep-clone plain JSON objects (no functions/dates/etc.) */
   function deepClone(o) {
@@ -638,28 +639,45 @@
 
   /* ── 4. IFRAME REFERENCE & LOAD PROMISE ── */
   var iframe = document.getElementById('cms-preview');
+
+  /**
+   * C2: captureDefaults()
+   * Reads the ORIGINAL value of every wired element from the iframe DOM
+   * and stores it in DEFAULTS (a Map keyed by f.path). Must run BEFORE the
+   * first pushDraft() so we capture the hardcoded values, not any draft.
+   */
+  function captureDefaults() {
+    DEFAULTS = new Map();
+    try {
+      var doc = iframe.contentWindow.document;
+      (window.CMS_FIELDS || []).forEach(function (f) {
+        try {
+          var el = doc.querySelector(f.sel);
+          if (!el) { DEFAULTS.set(f.path, ''); return; }
+          var val = f.kind === 'image' ? (el.getAttribute('src') || '') : (el.textContent || '').trim();
+          DEFAULTS.set(f.path, val);
+        } catch (e) {
+          DEFAULTS.set(f.path, '');
+        }
+      });
+    } catch (e) { /* cross-origin guard — DEFAULTS stays empty, graceful */ }
+  }
+
   var iframeReady = new Promise(function (resolve) {
-    iframe.addEventListener('load', resolve, { once: true });
+    iframe.addEventListener('load', function () {
+      // C2: capture defaults FIRST, then resolve (pushDraft fires after resolve consumers run)
+      captureDefaults();
+      resolve();
+    }, { once: true });
   });
 
   /**
-   * getDefault(f) → Promise<string>
-   * Reads the current displayed value of a field from the preview iframe's DOM
-   * once the iframe has loaded. Falls back to '' on any error.
-   * For images resolves to the element's src attribute.
+   * getDefault(f) → string  (C2: now synchronous — reads from DEFAULTS map)
+   * Falls back to '' if not yet captured or field absent.
+   * For images returns the original src; for text fields the original textContent.
    */
   function getDefault(f) {
-    return iframeReady.then(function () {
-      try {
-        var doc = iframe.contentWindow.document;
-        var el  = doc.querySelector(f.sel);
-        if (!el) return '';
-        if (f.kind === 'image') return el.getAttribute('src') || '';
-        return (el.textContent || '').trim();
-      } catch (e) {
-        return '';
-      }
-    });
+    return DEFAULTS.has(f.path) ? DEFAULTS.get(f.path) : '';
   }
 
   /* ── 5. FORM RENDERING ── */
@@ -712,14 +730,13 @@
 
       row.appendChild(imageWrap);
 
-      // Async: fill with live default if draft had nothing
+      // C2: getDefault is now synchronous — fill with captured original if draft had nothing
       if (!draftVal) {
-        getDefault(f).then(function (src) {
-          if (src && !thumb.src) {
-            thumb.src = src;
-            caption.textContent = src;
-          }
-        });
+        var src = getDefault(f);
+        if (src) {
+          thumb.src = src;
+          caption.textContent = src;
+        }
       }
 
     } else if (f.kind === 'multiline') {
@@ -730,11 +747,10 @@
       ta.value = draftVal || '';
       row.appendChild(ta);
 
-      // Async: fill with live default if draft had nothing
+      // C2: getDefault is now synchronous
       if (!draftVal) {
-        getDefault(f).then(function (txt) {
-          if (txt && !ta.value) ta.value = txt;
-        });
+        var txt = getDefault(f);
+        if (txt) ta.value = txt;
       }
 
     } else {
@@ -746,11 +762,10 @@
       inp.value = draftVal || '';
       row.appendChild(inp);
 
-      // Async: fill with live default if draft had nothing
+      // C2: getDefault is now synchronous
       if (!draftVal) {
-        getDefault(f).then(function (txt) {
-          if (txt && !inp.value) inp.value = txt;
-        });
+        var txt = getDefault(f);
+        if (txt) inp.value = txt;
       }
     }
 
@@ -787,35 +802,33 @@
         unsetAt(DRAFT, field.path);
         refreshUnsaved();
 
-        // 2. Restore the visible control
+        // 2. Restore the visible control (C2: getDefault is now synchronous)
         if (field.kind === 'image') {
-          getDefault(field).then(function (src) {
-            var th  = document.getElementById('field-' + field.path);
-            var cap = document.getElementById('caption-' + field.path);
-            if (th)  { th.src = src || ''; }
-            if (cap) { cap.textContent = src || ''; }
-            // 4. Push updated draft to preview iframe
-            pushDraft();
-          });
+          var src = getDefault(field);
+          var th  = document.getElementById('field-' + field.path);
+          var cap = document.getElementById('caption-' + field.path);
+          if (th)  { th.src = src || ''; }
+          if (cap) { cap.textContent = src || ''; }
+          // 4. Push updated draft to preview iframe
+          pushDraft();
         } else {
-          getDefault(field).then(function (txt) {
-            var ctrl = document.getElementById('field-' + field.path);
-            if (ctrl) ctrl.value = txt || '';
-            // 3. Refresh counter if present
-            if (ctr && field.max) {
-              var n = (txt || '').length;
-              ctr.textContent = n + ' / ' + field.max;
-              if (n > field.max) {
-                ctr.classList.add('over');
-                ctr.title = 'May overflow the layout';
-              } else {
-                ctr.classList.remove('over');
-                ctr.title = '';
-              }
+          var txt = getDefault(field);
+          var ctrl = document.getElementById('field-' + field.path);
+          if (ctrl) ctrl.value = txt || '';
+          // 3. Refresh counter if present
+          if (ctr && field.max) {
+            var n = (txt || '').length;
+            ctr.textContent = n + ' / ' + field.max;
+            if (n > field.max) {
+              ctr.classList.add('over');
+              ctr.title = 'May overflow the layout';
+            } else {
+              ctr.classList.remove('over');
+              ctr.title = '';
             }
-            // 4. Push updated draft to preview iframe
-            pushDraft();
-          });
+          }
+          // 4. Push updated draft to preview iframe
+          pushDraft();
         }
       });
     }(f, counter));
@@ -876,8 +889,33 @@
       .eq('id', 1)
       .single()
       .then(function (res) {
+        // I4: distinguish missing-row (PGRST116) from other errors
+        if (res.error) {
+          if (res.error.code === 'PGRST116') {
+            // No row exists yet — first-time setup
+            RECORD = {};
+            DRAFT  = {};
+            refreshUnsaved();
+            renderForm();
+            pushDraft();
+            // Show setup banner and disable Publish until row is seeded
+            setPublishStatus('First-time setup — no content row yet. Ask the operator to seed via SETUP.md Step 4.');
+            if (btnPublish) btnPublish.disabled = true;
+          } else {
+            // Network error, RLS misconfiguration, etc.
+            setPublishStatus('Failed to load — try refreshing the page.');
+            if (btnPublish) btnPublish.disabled = true;
+            if (btnDiscard) btnDiscard.disabled = true;
+          }
+          return;
+        }
+
         var data = res.data;
-        RECORD = (data && data.content) || {};
+        if (data && data.content) {
+          RECORD = data.content;
+        } else {
+          RECORD = {};
+        }
         // Task 6: initialise working draft from the freshly-fetched record
         DRAFT = deepClone(RECORD);
         refreshUnsaved();
@@ -887,12 +925,10 @@
         pushDraft();
       })
       .catch(function () {
-        // Row doesn't exist yet — treat as empty record
-        RECORD = {};
-        DRAFT  = {};
-        refreshUnsaved();
-        renderForm();
-        pushDraft();
+        // Unexpected rejection (network, etc.) — show error, don't render
+        setPublishStatus('Failed to load — try refreshing the page.');
+        if (btnPublish) btnPublish.disabled = true;
+        if (btnDiscard) btnDiscard.disabled = true;
       });
   }
 
@@ -1053,8 +1089,10 @@
         // Must be a non-empty string starting with https:// from Supabase,
         // or an origin-relative path (seed content uses these)
         if (typeof val !== 'string' || val === '') continue; // empty = not set; ok
+        // C3: removed lionsgatevenue.com substring match — it passed attacker?q=lionsgatevenue.com
+        // Acceptable: Supabase Storage URLs, or origin-relative seed paths
         var ok = (
-          (val.startsWith('https://') && (supabaseRe.test(val) || val.indexOf('lionsgatevenue.com') !== -1)) ||
+          (val.startsWith('https://') && supabaseRe.test(val)) ||
           relativeRe.test(val)
         );
         if (!ok) {
@@ -1185,6 +1223,15 @@
   }
 
   btnPublish.addEventListener('click', function () {
+    // I6: strip empty-string keys from DRAFT before validation/publish
+    // Empty input ⇒ remove the override ⇒ iframe falls back to hardcoded default
+    (window.CMS_FIELDS || []).forEach(function (f) {
+      var val = window.CMS_GET(DRAFT, f.path);
+      if (val === '') {
+        unsetAt(DRAFT, f.path);
+      }
+    });
+
     // 1. Validate
     var result = validateDraft();
     if (!result.ok) {
@@ -1198,10 +1245,11 @@
     setPublishBtnsDisabled(true);
     setPublishStatus('Publishing…');
 
-    // 3. Write to Supabase
+    // 3. Write to Supabase — I3: chain .select('content') so we get the updated row back
     sb.from('site_content')
       .update({ content: DRAFT, updated_at: new Date().toISOString() })
       .eq('id', 1)
+      .select('content')
       .then(function (res) {
         if (res.error) {
           var err = res.error;
@@ -1222,16 +1270,30 @@
           return;
         }
 
-        // 4. Success: promote DRAFT → RECORD (mutate same object reference)
-        var keys = Object.keys(RECORD);
-        keys.forEach(function (k) { delete RECORD[k]; });
-        var draftKeys = Object.keys(DRAFT);
-        draftKeys.forEach(function (k) { RECORD[k] = deepClone(DRAFT[k]); });
+        // I3: verify the update actually wrote a row
+        if (!res.data || res.data.length === 0) {
+          setPublishStatus('No row updated — confirm the operator inserted the seed row (see supabase/SETUP.md Step 4).');
+          var dirty = JSON.stringify(DRAFT) !== JSON.stringify(RECORD);
+          btnPublish.disabled = !dirty;
+          btnDiscard.disabled = !dirty;
+          return;
+        }
 
-        refreshUnsaved(); // will also disable publish/discard
-
-        setPublishStatus('Published. Live in a moment.');
-        setTimeout(function () { setPublishStatus(''); }, 4000);
+        // I5: re-fetch from Supabase to reconcile (covers concurrent writes, triggers)
+        setPublishStatus('Published. Refreshing…');
+        loadRecord().then(function () {
+          setPublishStatus('Published. Live in a moment.');
+          setTimeout(function () { setPublishStatus(''); }, 4000);
+        }).catch(function () {
+          // re-fetch failed but publish succeeded; fall back to promoting DRAFT locally
+          var keys = Object.keys(RECORD);
+          keys.forEach(function (k) { delete RECORD[k]; });
+          var draftKeys = Object.keys(DRAFT);
+          draftKeys.forEach(function (k) { RECORD[k] = deepClone(DRAFT[k]); });
+          refreshUnsaved();
+          setPublishStatus('Published. Live in a moment.');
+          setTimeout(function () { setPublishStatus(''); }, 4000);
+        });
       })
       .catch(function (err) {
         setPublishStatus(err.message || 'Publish failed.');

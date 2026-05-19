@@ -15,7 +15,7 @@ window.CMS_PHOTO_BUCKET = "site-photos";
 window.CMS_FIELDS = [
   { path:"hero.eyebrow",  sel:'[data-cms="hero.eyebrow"]',  kind:"text",      label:"Eyebrow",  group:"Hero", max:60 },
   { path:"hero.headline", sel:'[data-cms="hero.headline"]', kind:"multiline", label:"Headline", group:"Hero", max:90 },
-  { path:"hero.body",     sel:'[data-cms="hero.body"]',     kind:"text",      label:"Intro paragraph", group:"Hero", max:320 },
+  // hero.body omitted — contains <em> inline HTML that textContent strips (C1)
 
   ...[0,1,2,3,4,5].flatMap(i => ([
     { path:`spaces.${i}.tag`,  sel:`[data-cms="spaces.${i}.tag"]`,  kind:"text",  label:`Space ${i+1} — label`,       group:"The Spaces", max:24 },
@@ -30,10 +30,10 @@ window.CMS_FIELDS = [
     { path:`pricing.${i}.rate`, sel:`[data-cms="pricing.${i}.rate"]`, kind:"text", label:`Pricing ${i+1} — rate line`, group:"Pricing", max:90 },
   ])),
 
-  ...[0,1].flatMap(i => ([
-    { path:`testimonials.${i}.quote`,       sel:`[data-cms="testimonials.${i}.quote"]`,       kind:"text", label:`Testimonial ${i+1} — quote`,       group:"Testimonials", max:240 },
-    { path:`testimonials.${i}.attribution`, sel:`[data-cms="testimonials.${i}.attribution"]`, kind:"text", label:`Testimonial ${i+1} — attribution`, group:"Testimonials", max:80 },
-  ])),
+  // testimonials.*.attribution omitted — contains <br><span> HTML that textContent strips (C1)
+  ...[0,1].map(i => (
+    { path:`testimonials.${i}.quote`, sel:`[data-cms="testimonials.${i}.quote"]`, kind:"text", label:`Testimonial ${i+1} — quote`, group:"Testimonials", max:240 }
+  )),
 
   { path:"photos.essenceBg",    sel:'[data-cms="photos.essenceBg"]',    kind:"image", label:"Essence background", group:"Photos" },
   { path:"photos.ledHero",      sel:'[data-cms="photos.ledHero"]',      kind:"image", label:"Mark — LED hero",    group:"Photos" },
