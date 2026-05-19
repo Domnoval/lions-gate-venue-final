@@ -1181,5 +1181,69 @@ if(dnHandle&&dnCont){
   });
 })();
 </script>
+<script src="cms-fields.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* CMS loader — OVERRIDE ONLY. Any failure leaves hardcoded content intact. */
+(function(){
+  function applyText(el, val, multiline){
+    if(!el || val == null || val === "") return;
+    if(multiline){
+      el.textContent = "";
+      String(val).split("\n").forEach((line, i) => {
+        if(i) el.appendChild(document.createElement("br"));
+        el.appendChild(document.createTextNode(line));
+      });
+    } else {
+      el.textContent = String(val);   // textContent => no HTML injection
+    }
+  }
+  function apply(record){
+    try{
+      (window.CMS_FIELDS||[]).forEach(f => {
+        const val = window.CMS_GET(record, f.path);
+        if(val == null || val === "") return;            // blank => keep default
+        const el = document.querySelector(f.sel);
+        if(!el) return;
+        if(f.kind === "image"){ if(typeof val==="string" && val) el.src = val; }
+        else applyText(el, val, f.kind === "multiline");
+      });
+    }catch(e){ /* never let CMS break the page */ }
+  }
+  try{
+    if(!window.supabase || !window.CMS_SUPABASE_URL ||
+       window.CMS_SUPABASE_URL.indexOf("__FILL") === 0) return;  // not configured yet => no-op
+    const sb = window.supabase.createClient(window.CMS_SUPABASE_URL, window.CMS_SUPABASE_ANON_KEY);
+    sb.from("site_content").select("content").eq("id",1).single()
+      .then(({data}) => { if(data && data.content) apply(data.content); })
+      .catch(()=>{});                                   // network/RLS error => keep defaults
+  }catch(e){ /* keep defaults */ }
+  // Live preview hook for the admin editor. Only active when ?cms-preview=1.
+  // 1) Capture each wired element's ORIGINAL value once, so reverts restore exactly.
+  // 2) Listen for {type:"cms-draft", draft:{...}} postMessage; reapply defaults then overlay draft.
+  try{
+    if (new URLSearchParams(location.search).get("cms-preview") === "1") {
+      const ORIGINALS = new Map();
+      (window.CMS_FIELDS||[]).forEach(f => {
+        const el = document.querySelector(f.sel); if(!el) return;
+        ORIGINALS.set(f.path, f.kind === "image" ? el.getAttribute("src") : el.innerHTML);
+      });
+      window.addEventListener("message", (ev) => {
+        if (!ev.data || ev.data.type !== "cms-draft") return;
+        // restore originals first
+        (window.CMS_FIELDS||[]).forEach(f => {
+          const el = document.querySelector(f.sel); if(!el) return;
+          const orig = ORIGINALS.get(f.path);
+          if (orig == null) return;
+          if (f.kind === "image") el.src = orig;
+          else el.innerHTML = orig;             // restore preserves the original <br> structure
+        });
+        // then overlay the draft (apply() already handles missing/blank => no change)
+        apply(ev.data.draft || {});
+      });
+    }
+  }catch(e){ /* preview hook is best-effort */ }
+})();
+</script>
 </body>
 </html>
