@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lionsgate — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <!-- 1. Shared field map + Supabase config contract -->
+  <script src="cms-fields.js"></script>
+  <!-- 2. Supabase JS client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    /* ── CSS Variables ── */
+    :root {
+      --bg:       #0a0906;
+      --surface:  #1a1610;
+      --surface2: #221e14;
+      --text:     #e8dcc8;
+      --text-dim: rgba(232,220,200,0.74);
+      --text-muted: rgba(232,220,200,0.42);
+      --gold:       #c9a84c;
+      --gold-light: #e4c97e;
+      --border:   rgba(201,168,76,0.18);
+      --border-focus: rgba(201,168,76,0.55);
+      --danger:   #c0604a;
+    }
+
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+
+    body {
+      font-family:'Outfit', sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      line-height:1.5;
+    }
+
+    /* ── UNCONFIGURED BANNER ── */
+    #unconfigured-banner {
+      display:none;
+      min-height:100vh;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      gap:1.25rem;
+      padding:2rem;
+      text-align:center;
+    }
+    #unconfigured-banner .banner-icon {
+      font-size:2.5rem;
+      opacity:0.6;
+    }
+    #unconfigured-banner h1 {
+      font-family:'Cormorant Garamond', serif;
+      font-size:clamp(1.4rem, 3vw, 2rem);
+      font-weight:400;
+      color:var(--gold);
+      letter-spacing:0.04em;
+    }
+    #unconfigured-banner p {
+      color:var(--text-dim);
+      font-size:0.9rem;
+      max-width:480px;
+      line-height:1.65;
+    }
+    #unconfigured-banner code {
+      font-family:monospace;
+      font-size:0.85em;
+      color:var(--gold-light);
+      background:var(--surface);
+      padding:0.15em 0.45em;
+      border-radius:3px;
+    }
+
+    /* ── LOGIN VIEW ── */
+    #login-view {
+      display:none;
+      min-height:100vh;
+      align-items:center;
+      justify-content:center;
+    }
+    .login-card {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:8px;
+      padding:2.5rem 2.25rem;
+      width:min(100%, 380px);
+      display:flex;
+      flex-direction:column;
+      gap:1.25rem;
+    }
+    .login-card .brand {
+      font-family:'Cormorant Garamond', serif;
+      font-size:1.55rem;
+      font-weight:400;
+      color:var(--gold);
+      letter-spacing:0.1em;
+      text-transform:uppercase;
+      text-align:center;
+      margin-bottom:0.25rem;
+    }
+    .login-card .brand-sub {
+      font-size:0.7rem;
+      color:var(--text-dim);
+      letter-spacing:0.35em;
+      text-transform:uppercase;
+      text-align:center;
+    }
+    .login-card label {
+      font-size:0.75rem;
+      letter-spacing:0.08em;
+      color:var(--text-dim);
+      text-transform:uppercase;
+      display:block;
+      margin-bottom:0.35rem;
+    }
+    .login-card input {
+      width:100%;
+      padding:0.6rem 0.8rem;
+      background:var(--bg);
+      border:1px solid var(--border);
+      border-radius:4px;
+      color:var(--text);
+      font-family:'Outfit', sans-serif;
+      font-size:0.9rem;
+      outline:none;
+      transition:border-color 0.2s;
+    }
+    .login-card input:focus { border-color:var(--border-focus); }
+    .btn-primary {
+      background:transparent;
+      border:1px solid var(--gold);
+      color:var(--gold-light);
+      font-family:'Outfit', sans-serif;
+      font-size:0.78rem;
+      font-weight:400;
+      letter-spacing:0.25em;
+      text-transform:uppercase;
+      padding:0.75em 1.5em;
+      cursor:pointer;
+      width:100%;
+      transition:background 0.2s, color 0.2s;
+      border-radius:3px;
+    }
+    .btn-primary:hover { background:rgba(201,168,76,0.1); }
+    .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
+    #login-error {
+      font-size:0.82rem;
+      color:var(--danger);
+      min-height:1.2em;
+      text-align:center;
+    }
+
+    /* ── EDITOR VIEW ── */
+    #editor-view {
+      display:none;
+      flex-direction:column;
+      min-height:100vh;
+    }
+
+    /* Header bar */
+    .admin-header {
+      background:var(--surface);
+      border-bottom:1px solid var(--border);
+      padding:0.7rem 1.25rem;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:1rem;
+      position:sticky;
+      top:0;
+      z-index:50;
+    }
+    .admin-header .header-brand {
+      font-family:'Cormorant Garamond', serif;
+      font-size:1.1rem;
+      color:var(--gold);
+      letter-spacing:0.12em;
+      text-transform:uppercase;
+    }
+    .admin-header .header-right {
+      display:flex;
+      align-items:center;
+      gap:0.75rem;
+    }
+    #populating-indicator {
+      font-size:0.72rem;
+      color:var(--text-muted);
+      letter-spacing:0.06em;
+      display:none;
+    }
+    .btn-secondary {
+      background:transparent;
+      border:1px solid var(--border);
+      color:var(--text-dim);
+      font-family:'Outfit', sans-serif;
+      font-size:0.72rem;
+      font-weight:400;
+      letter-spacing:0.2em;
+      text-transform:uppercase;
+      padding:0.5em 1em;
+      cursor:pointer;
+      border-radius:3px;
+      transition:border-color 0.2s, color 0.2s;
+    }
+    .btn-secondary:hover { border-color:var(--gold); color:var(--gold-light); }
+
+    /* Two-column editor body */
+    .editor-body {
+      flex:1;
+      display:grid;
+      grid-template-columns: minmax(380px, 520px) 1fr;
+      min-height:0;
+    }
+
+    /* Left: form panel */
+    .form-panel {
+      background:var(--bg);
+      border-right:1px solid var(--border);
+      overflow-y:auto;
+      height:calc(100vh - 46px); /* header ~46px */
+      padding:1.25rem 1rem 2rem;
+      display:flex;
+      flex-direction:column;
+      gap:0.5rem;
+    }
+
+    /* Right: preview iframe */
+    .preview-panel {
+      background:var(--surface);
+      height:calc(100vh - 46px);
+    }
+    #cms-preview {
+      width:100%;
+      height:100%;
+      border:none;
+      display:block;
+    }
+
+    /* ── DETAILS / GROUP ACCORDION ── */
+    details {
+      border:1px solid var(--border);
+      border-radius:5px;
+      overflow:hidden;
+    }
+    details[open] { border-color:rgba(201,168,76,0.32); }
+    details > summary {
+      padding:0.75rem 1rem;
+      cursor:pointer;
+      font-family:'Cormorant Garamond', serif;
+      font-size:1rem;
+      font-weight:500;
+      letter-spacing:0.08em;
+      color:var(--gold-light);
+      background:var(--surface);
+      user-select:none;
+      list-style:none;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      transition:background 0.15s;
+    }
+    details > summary::-webkit-details-marker { display:none; }
+    details > summary::after {
+      content:'▸';
+      font-size:0.7em;
+      opacity:0.6;
+      transition:transform 0.2s;
+    }
+    details[open] > summary::after { transform:rotate(90deg); }
+    details > summary:hover { background:var(--surface2); }
+    .group-fields {
+      padding:0.75rem 0.85rem 0.85rem;
+      display:flex;
+      flex-direction:column;
+      gap:0.85rem;
+    }
+
+    /* ── FIELD ROW ── */
+    .row {
+      display:flex;
+      flex-direction:column;
+      gap:0.35rem;
+    }
+    .row label {
+      font-size:0.72rem;
+      letter-spacing:0.07em;
+      color:var(--text-dim);
+      text-transform:uppercase;
+    }
+    .row input[type="text"],
+    .row textarea,
+    .row input[type="file"] {
+      width:100%;
+      background:var(--bg);
+      border:1px solid var(--border);
+      border-radius:4px;
+      color:var(--text);
+      font-family:'Outfit', sans-serif;
+      font-size:0.88rem;
+      padding:0.5rem 0.65rem;
+      outline:none;
+      transition:border-color 0.2s;
+      resize:vertical;
+    }
+    .row input[type="text"]:focus,
+    .row textarea:focus { border-color:var(--border-focus); }
+    .row textarea { rows:3; min-height:64px; }
+
+    /* Image field */
+    .image-field {
+      display:flex;
+      flex-direction:column;
+      gap:0.4rem;
+    }
+    .image-thumb {
+      height:64px;
+      width:auto;
+      max-width:120px;
+      object-fit:cover;
+      border-radius:3px;
+      border:1px solid var(--border);
+      background:var(--surface);
+    }
+    .image-src-caption {
+      font-family:monospace;
+      font-size:0.7rem;
+      color:var(--text-muted);
+      word-break:break-all;
+    }
+    .row input[type="file"] {
+      font-size:0.78rem;
+      padding:0.3rem 0.45rem;
+      cursor:pointer;
+      color:var(--text-dim);
+    }
+
+    /* Extension slot for counter + revert (Tasks 6/7) */
+    .row-extras {
+      display:flex;
+      align-items:center;
+      gap:0.5rem;
+      min-height:1.1em;
+    }
+
+    /* ── RESPONSIVE: stack at narrow widths ── */
+    @media (max-width:820px) {
+      .editor-body {
+        grid-template-columns:1fr;
+      }
+      .form-panel,
+      .preview-panel {
+        height:auto;
+      }
+      .preview-panel {
+        height:60vw;
+        min-height:280px;
+      }
+      #cms-preview {
+        height:100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── UNCONFIGURED BANNER ── -->
+<div id="unconfigured-banner">
+  <div class="banner-icon">⚙</div>
+  <h1>Admin not yet configured</h1>
+  <p>
+    Set up Supabase first: fill in <code>CMS_SUPABASE_URL</code> and
+    <code>CMS_SUPABASE_ANON_KEY</code> in <code>cms-fields.js</code>, then
+    redeploy. See <code>supabase/SETUP.md</code> for step-by-step instructions.
+  </p>
+</div>
+
+<!-- ── LOGIN VIEW ── -->
+<div id="login-view">
+  <div class="login-card">
+    <div>
+      <div class="brand">Lionsgate</div>
+      <div class="brand-sub">Admin</div>
+    </div>
+    <div>
+      <label for="login-email">Email</label>
+      <input id="login-email" type="email" autocomplete="email" placeholder="admin@example.com">
+    </div>
+    <div>
+      <label for="login-password">Password</label>
+      <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••">
+    </div>
+    <div id="login-error" aria-live="polite"></div>
+    <button id="login-btn" class="btn-primary">Sign in</button>
+  </div>
+</div>
+
+<!-- ── EDITOR VIEW ── -->
+<div id="editor-view">
+  <header class="admin-header">
+    <span class="header-brand">Lionsgate — Content Editor</span>
+    <div class="header-right">
+      <span id="populating-indicator">Populating defaults…</span>
+      <!-- Tasks 6/7: publish button goes here -->
+      <div id="publish-slot"></div>
+      <button id="signout-btn" class="btn-secondary">Sign out</button>
+    </div>
+  </header>
+
+  <div class="editor-body">
+    <!-- Left: field form -->
+    <div class="form-panel">
+      <form id="cms-form" autocomplete="off">
+        <!-- Rendered by renderForm() -->
+      </form>
+    </div>
+
+    <!-- Right: live preview iframe -->
+    <div class="preview-panel">
+      <iframe
+        id="cms-preview"
+        src="/?cms-preview=1"
+        title="Site preview"
+        sandbox="allow-scripts allow-same-origin"
+      ></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ── 0. PLACEHOLDER GUARD ── */
+  if (
+    !window.CMS_SUPABASE_URL ||
+    window.CMS_SUPABASE_URL.startsWith('__FILL')
+  ) {
+    document.getElementById('unconfigured-banner').style.display = 'flex';
+    // Stop here — don't attempt auth or Supabase init
+    return;
+  }
+
+  /* ── 1. SUPABASE CLIENT ── */
+  var sb = window.supabase.createClient(
+    window.CMS_SUPABASE_URL,
+    window.CMS_SUPABASE_ANON_KEY
+  );
+
+  /* ── 2. RECORD STORE ── */
+  var RECORD = {};
+
+  /* ── 3. VIEW SWITCHES ── */
+  var loginView  = document.getElementById('login-view');
+  var editorView = document.getElementById('editor-view');
+
+  function showLogin() {
+    loginView.style.display  = 'flex';
+    editorView.style.display = 'none';
+    document.getElementById('login-error').textContent = '';
+    document.getElementById('login-email').focus();
+  }
+
+  function showEditor() {
+    loginView.style.display  = 'none';
+    editorView.style.display = 'flex';
+  }
+
+  /* ── 4. IFRAME REFERENCE & LOAD PROMISE ── */
+  var iframe = document.getElementById('cms-preview');
+  var iframeReady = new Promise(function (resolve) {
+    iframe.addEventListener('load', resolve, { once: true });
+  });
+
+  /**
+   * getDefault(f) → Promise<string>
+   * Reads the current displayed value of a field from the preview iframe's DOM
+   * once the iframe has loaded. Falls back to '' on any error.
+   * For images resolves to the element's src attribute.
+   */
+  function getDefault(f) {
+    return iframeReady.then(function () {
+      try {
+        var doc = iframe.contentWindow.document;
+        var el  = doc.querySelector(f.sel);
+        if (!el) return '';
+        if (f.kind === 'image') return el.getAttribute('src') || '';
+        return (el.textContent || '').trim();
+      } catch (e) {
+        return '';
+      }
+    });
+  }
+
+  /* ── 5. FORM RENDERING ── */
+
+  /**
+   * fieldRow(f) → HTMLElement
+   * Creates one labeled control for a field. Data-path set for Tasks 6/7.
+   * Renders synchronously with empty/record values, fills defaults async.
+   */
+  function fieldRow(f) {
+    var row = document.createElement('div');
+    row.className = 'row';
+
+    var lbl = document.createElement('label');
+    lbl.textContent = f.label;
+    lbl.setAttribute('for', 'field-' + f.path);
+    row.appendChild(lbl);
+
+    var recordVal = window.CMS_GET(RECORD, f.path);
+
+    if (f.kind === 'image') {
+      var imageWrap = document.createElement('div');
+      imageWrap.className = 'image-field';
+
+      var thumb = document.createElement('img');
+      thumb.className = 'image-thumb';
+      thumb.alt = f.label;
+      thumb.src = recordVal || '';
+      thumb.setAttribute('data-path', f.path);
+      thumb.id = 'field-' + f.path;
+      imageWrap.appendChild(thumb);
+
+      var caption = document.createElement('div');
+      caption.className = 'image-src-caption';
+      caption.id = 'caption-' + f.path;
+      caption.textContent = recordVal || '';
+      imageWrap.appendChild(caption);
+
+      // File input placeholder — Task 7 wires the upload handler
+      var fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.setAttribute('data-path', f.path);
+      fileInput.setAttribute('data-for-thumb', 'field-' + f.path);
+      fileInput.id = 'upload-' + f.path;
+      imageWrap.appendChild(fileInput);
+
+      row.appendChild(imageWrap);
+
+      // Async: fill with live default if record had nothing
+      if (!recordVal) {
+        getDefault(f).then(function (src) {
+          if (src && !thumb.src) {
+            thumb.src = src;
+            caption.textContent = src;
+          }
+        });
+      }
+
+    } else if (f.kind === 'multiline') {
+      var ta = document.createElement('textarea');
+      ta.rows = 3;
+      ta.id   = 'field-' + f.path;
+      ta.setAttribute('data-path', f.path);
+      ta.value = recordVal || '';
+      row.appendChild(ta);
+
+      // Async: fill with live default if record had nothing
+      if (!recordVal) {
+        getDefault(f).then(function (txt) {
+          if (txt && !ta.value) ta.value = txt;
+        });
+      }
+
+    } else {
+      // kind:"text" (default)
+      var inp = document.createElement('input');
+      inp.type = 'text';
+      inp.id   = 'field-' + f.path;
+      inp.setAttribute('data-path', f.path);
+      inp.value = recordVal || '';
+      row.appendChild(inp);
+
+      // Async: fill with live default if record had nothing
+      if (!recordVal) {
+        getDefault(f).then(function (txt) {
+          if (txt && !inp.value) inp.value = txt;
+        });
+      }
+    }
+
+    // Extension slot — Tasks 6/7 append counter + revert button here
+    var extras = document.createElement('div');
+    extras.className = 'row-extras';
+    extras.id = 'extras-' + f.path;
+    row.appendChild(extras);
+
+    return row;
+  }
+
+  /**
+   * renderForm()
+   * Groups CMS_FIELDS by f.group (preserving first-seen order),
+   * emits one <details> per group with fields inside.
+   */
+  function renderForm() {
+    var form = document.getElementById('cms-form');
+    form.innerHTML = '';
+
+    // Collect groups in first-seen order
+    var groupOrder  = [];
+    var groupFields = {};
+    window.CMS_FIELDS.forEach(function (f) {
+      if (!groupFields[f.group]) {
+        groupOrder.push(f.group);
+        groupFields[f.group] = [];
+      }
+      groupFields[f.group].push(f);
+    });
+
+    groupOrder.forEach(function (groupName, idx) {
+      var details = document.createElement('details');
+      // Open first group by default
+      if (idx === 0) details.open = true;
+
+      var summary = document.createElement('summary');
+      summary.textContent = groupName;
+      details.appendChild(summary);
+
+      var fieldsWrap = document.createElement('div');
+      fieldsWrap.className = 'group-fields';
+      fieldsWrap.id = 'group-' + groupName.replace(/\s+/g, '-').toLowerCase();
+
+      groupFields[groupName].forEach(function (f) {
+        fieldsWrap.appendChild(fieldRow(f));
+      });
+
+      details.appendChild(fieldsWrap);
+      form.appendChild(details);
+    });
+  }
+
+  /* ── 6. LOAD RECORD FROM SUPABASE ── */
+  function loadRecord() {
+    return sb
+      .from('site_content')
+      .select('content')
+      .eq('id', 1)
+      .single()
+      .then(function (res) {
+        var data = res.data;
+        RECORD = (data && data.content) || {};
+        renderForm();
+      })
+      .catch(function () {
+        // Row doesn't exist yet — treat as empty record
+        RECORD = {};
+        renderForm();
+      });
+  }
+
+  /* ── 7. AUTH BOOTSTRAP ── */
+  function boot() {
+    sb.auth.getSession().then(function (res) {
+      var session = res.data && res.data.session;
+      if (session) {
+        showEditor();
+        showPopulatingIndicator();
+        loadRecord().then(hidePopulatingIndicator);
+      } else {
+        showLogin();
+      }
+    });
+  }
+
+  sb.auth.onAuthStateChange(function (_event, session) {
+    if (session) {
+      showEditor();
+      showPopulatingIndicator();
+      loadRecord().then(hidePopulatingIndicator);
+    } else {
+      showLogin();
+    }
+  });
+
+  /* Populating indicator helpers (shown while iframe defaults load) */
+  function showPopulatingIndicator() {
+    var el = document.getElementById('populating-indicator');
+    if (el) el.style.display = 'inline';
+    // Also wait for iframe to finish before hiding
+    iframeReady.then(function () {
+      // Give a tick for async getDefault chains to kick off
+      setTimeout(hidePopulatingIndicator, 600);
+    });
+  }
+
+  function hidePopulatingIndicator() {
+    var el = document.getElementById('populating-indicator');
+    if (el) el.style.display = 'none';
+  }
+
+  boot();
+
+  /* ── 8. LOGIN HANDLER ── */
+  var loginBtn = document.getElementById('login-btn');
+  var loginErr = document.getElementById('login-error');
+
+  loginBtn.addEventListener('click', function () {
+    var email    = document.getElementById('login-email').value.trim();
+    var password = document.getElementById('login-password').value;
+
+    if (!email || !password) {
+      loginErr.textContent = 'Please enter your email and password.';
+      return;
+    }
+
+    loginBtn.disabled    = true;
+    loginErr.textContent = '';
+
+    sb.auth
+      .signInWithPassword({ email: email, password: password })
+      .then(function (res) {
+        if (res.error) {
+          loginErr.textContent = res.error.message;
+          loginBtn.disabled = false;
+        }
+        // Success: onAuthStateChange fires → showEditor() + loadRecord()
+      })
+      .catch(function (err) {
+        loginErr.textContent = err.message || 'Sign in failed.';
+        loginBtn.disabled = false;
+      });
+  });
+
+  // Allow Enter key on password field
+  document.getElementById('login-password').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') loginBtn.click();
+  });
+
+  /* ── 9. SIGN-OUT HANDLER ── */
+  document.getElementById('signout-btn').addEventListener('click', function () {
+    sb.auth.signOut();
+    // onAuthStateChange fires → showLogin()
+  });
+
+  /* ── 10. EXTENSION HOOKS (Tasks 6/7 attach here) ── */
+  /**
+   * window.ADMIN_RECORD  — live reference to the current record object.
+   * window.ADMIN_SB      — the supabase client for Tasks 6/7.
+   * window.ADMIN_RELOAD  — call to re-fetch and re-render form.
+   * window.ADMIN_PREVIEW — reference to the preview iframe element.
+   * window.ADMIN_RENDER  — call renderForm() after mutating ADMIN_RECORD.
+   */
+  window.ADMIN_SB      = sb;
+  window.ADMIN_PREVIEW = iframe;
+  window.ADMIN_RELOAD  = function () {
+    showPopulatingIndicator();
+    return loadRecord().then(hidePopulatingIndicator);
+  };
+  // Tasks 6/7 read/write RECORD via getter/setter so they share the reference
+  Object.defineProperty(window, 'ADMIN_RECORD', {
+    get: function () { return RECORD; },
+    set: function (v) { RECORD = v; }
+  });
+  window.ADMIN_RENDER = renderForm;
+
+})();
+</script>
+</body>
+</html>
