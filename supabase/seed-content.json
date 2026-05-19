@@ -1,0 +1,76 @@
+{
+  "hero": {
+    "eyebrow": "Lionsgate · Lazy Lake, Florida",
+    "headline": "Eight people. Two acres.\nOne decision that was going to take three months and took a weekend."
+  },
+  "spaces": [
+    {
+      "tag": "The Skydeck",
+      "name": "Roof Deck",
+      "desc": "Open to the sky above Lazy Lake. Where conversations find their widest perspective.",
+      "img": "photos/michael-pool-twilight.jpg"
+    },
+    {
+      "tag": "Al Fresco",
+      "name": "Outdoor Dining",
+      "desc": "Where meals become meetings and the boundary between conversation and open air dissolves.",
+      "img": "photos/lionsgate-day.jpg"
+    },
+    {
+      "tag": "The Table",
+      "name": "Indoor Dining",
+      "desc": "Contained and considered. The formal gathering point where ideas are laid alongside everything else.",
+      "img": "photos/mark-art-gallery.jpg"
+    },
+    {
+      "tag": "The Center",
+      "name": "Living Room",
+      "desc": "The gravitational heart of the house. Comfortable enough for real talk. Open enough for the unexpected.",
+      "img": "photos/mark-moorish-bistro.jpg"
+    },
+    {
+      "tag": "The Flame",
+      "name": "Fire Pit",
+      "desc": "Some conversations need darkness and light in equal measure. The fire pit holds both.",
+      "img": "photos/michael-staghorn-bokeh.jpg"
+    },
+    {
+      "tag": "The Margins",
+      "name": "Breakout Spaces",
+      "desc": "Smaller pockets throughout the property for the conversations that happen at the edge of the main event.",
+      "img": "photos/succulent-garden.jpg"
+    }
+  ],
+  "pricing": [
+    {
+      "name": "Private Use",
+      "desc": "Use the space as your own — bring your people, your purpose, and let the environment do its work. Includes full property access: the Skydeck, Al Fresco, the Table, the Center, the Flame, the Margins. The setting shapes the conversation. You guide it.",
+      "rate": "A day rate, scoped to your gathering. Shared directly when we speak."
+    },
+    {
+      "name": "Curated Experience",
+      "desc": "A more intentional shaping of the day — how conversations flow, where energy gathers, and how the space supports it. Structure meets spontaneity.",
+      "rate": "Priced for the day we design together. Discussed when we speak."
+    },
+    {
+      "name": "Facilitated Sessions",
+      "desc": "For those seeking deeper clarity or alignment. Direct work with Mark to surface what matters, refine direction, and move things forward.",
+      "rate": "A bespoke engagement with Mark. Defined around what you need."
+    }
+  ],
+  "testimonials": [
+    {
+      "quote": "\"We came in with an agenda. We left with something better — a shared understanding we couldn't have planned for.\""
+    },
+    {
+      "quote": "\"[Second testimonial — replace with a real one. Aim for something concrete: an outcome, a decision made, a shift in clarity. Two to three sentences max.]\""
+    }
+  ],
+  "photos": {
+    "essenceBg": "photos/lionsgate-day.jpg",
+    "ledHero": "mark-portrait-hero.png",
+    "ledPortrait": "mark-portrait-bw.jpg",
+    "dayImg": "photos/lionsgate-day.jpg",
+    "nightImg": "photos/michael-pool-twilight.jpg"
+  }
+}
