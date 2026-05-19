@@ -979,8 +979,8 @@
       <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
       <noscript>
         <p class="form-status" style="opacity:1;">
-          If the form does not respond, email
-          <a href="mailto:CONTACT_EMAIL_PLACEHOLDER">us</a> directly.
+          This form needs JavaScript enabled to send. Please enable it, or
+          reach out again shortly — we'll be glad to hear from you.
         </p>
       </noscript>
     </form>
@@ -1155,8 +1155,11 @@ if(dnHandle&&dnCont){
       statusEl.textContent='Thank you - your inquiry is in. Mark will respond personally within 24 hours.';
     } else {
       statusEl.className='form-status error';
-      statusEl.innerHTML='Something went wrong sending this. Please email '+
-        '<a href="mailto:'+CONTACT_EMAIL+'">us</a> directly.';
+      var hasEmail = CONTACT_EMAIL.indexOf('PLACEHOLDER') === -1;
+      statusEl.innerHTML = hasEmail
+        ? 'Something went wrong sending this. Please email '+
+          '<a href="mailto:'+CONTACT_EMAIL+'">us</a> directly.'
+        : 'Something went wrong sending this — please try again in a moment.';
     }
   }
   form.addEventListener('submit', function(e){
