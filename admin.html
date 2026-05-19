@@ -380,6 +380,56 @@
       display:none;
     }
 
+    /* ── TASK 7: publish / discard buttons ── */
+    #btn-publish {
+      background:transparent;
+      border:1px solid var(--gold);
+      color:var(--gold-light);
+      font-family:'Outfit', sans-serif;
+      font-size:0.72rem;
+      font-weight:400;
+      letter-spacing:0.2em;
+      text-transform:uppercase;
+      padding:0.5em 1em;
+      cursor:pointer;
+      border-radius:3px;
+      transition:background 0.2s, color 0.2s;
+    }
+    #btn-publish:hover:not(:disabled) { background:rgba(201,168,76,0.15); }
+    #btn-publish:disabled { opacity:0.38; cursor:not-allowed; }
+
+    #btn-discard {
+      background:transparent;
+      border:1px solid var(--border);
+      color:var(--text-dim);
+      font-family:'Outfit', sans-serif;
+      font-size:0.72rem;
+      font-weight:400;
+      letter-spacing:0.2em;
+      text-transform:uppercase;
+      padding:0.5em 1em;
+      cursor:pointer;
+      border-radius:3px;
+      transition:border-color 0.2s, color 0.2s;
+    }
+    #btn-discard:hover:not(:disabled) { border-color:var(--gold); color:var(--gold-light); }
+    #btn-discard:disabled { opacity:0.38; cursor:not-allowed; }
+
+    /* ── TASK 7: image upload inline status ── */
+    .cms-row-status {
+      font-size:11px;
+      color:var(--text-muted);
+      font-style:italic;
+    }
+    .cms-row-status.error { color:var(--danger); font-style:normal; }
+
+    /* ── TASK 7: publish status toast (reuses header area) ── */
+    #publish-status {
+      font-size:0.72rem;
+      color:var(--text-dim);
+      letter-spacing:0.06em;
+    }
+
     /* ── RESPONSIVE: stack at narrow widths ── */
     @media (max-width:820px) {
       .editor-body {
@@ -440,8 +490,10 @@
       <span id="populating-indicator">Populating defaults…</span>
       <!-- Task 6: unsaved-changes indicator -->
       <span id="unsaved-indicator">Unsaved changes</span>
-      <!-- Tasks 6/7: publish button goes here -->
-      <div id="publish-slot"></div>
+      <!-- Task 7: publish / discard + status -->
+      <span id="publish-status"></span>
+      <button id="btn-publish" disabled>Publish changes</button>
+      <button id="btn-discard" disabled>Discard changes</button>
       <button id="signout-btn" class="btn-secondary">Sign out</button>
     </div>
   </header>
@@ -975,7 +1027,252 @@
     pushDraftDebounced();
   });
 
-  /* ── 11. EXTENSION HOOKS (Tasks 6/7 attach here) ── */
+  /* ── 11. TASK 7: IMAGE UPLOAD + PUBLISH + DISCARD ── */
+
+  /**
+   * validateDraft()
+   * Checks every field that appears in the current DRAFT for security and
+   * length constraints.  Returns { ok:true } or { ok:false, label, val }.
+   */
+  function validateDraft() {
+    // Regex explanations:
+    //   supabaseRe  — any https://*.supabase.co/... URL
+    //   relativeRe  — origin-relative paths used in seed content:
+    //                 "photos/foo.jpg", "foo.png", "foo.jpg", "foo.webp" etc.
+    var supabaseRe = /^https:\/\/[a-z0-9-]+\.supabase\.co\//;
+    var relativeRe = /^(photos\/[a-z0-9_.-]+|[a-z0-9_-]+\.(png|jpe?g|webp))$/i;
+
+    for (var i = 0; i < window.CMS_FIELDS.length; i++) {
+      var f   = window.CMS_FIELDS[i];
+      var val = window.CMS_GET(DRAFT, f.path);
+
+      // Only validate if the field is actually set in DRAFT
+      if (val === undefined || val === null) continue;
+
+      if (f.kind === 'image') {
+        // Must be a non-empty string starting with https:// from Supabase,
+        // or an origin-relative path (seed content uses these)
+        if (typeof val !== 'string' || val === '') continue; // empty = not set; ok
+        var ok = (
+          (val.startsWith('https://') && (supabaseRe.test(val) || val.indexOf('lionsgatevenue.com') !== -1)) ||
+          relativeRe.test(val)
+        );
+        if (!ok) {
+          return { ok: false, label: f.label, val: val };
+        }
+      } else if (f.kind === 'text' || f.kind === 'multiline') {
+        var hardMax = (f.max || 320) * 2;
+        if (typeof val === 'string' && val.length > hardMax) {
+          return { ok: false, label: f.label, val: val };
+        }
+      }
+    }
+    return { ok: true };
+  }
+
+  /* ── 11a. PHOTO UPLOAD ── */
+
+  /**
+   * Attach a change listener to every file input rendered inside cms-form.
+   * Called once after renderForm() — and re-called if renderForm() is invoked
+   * again (Discard path).  Uses event delegation so we don't need to re-wire.
+   */
+  document.getElementById('cms-form').addEventListener('change', function (e) {
+    var ctrl = e.target;
+    if (ctrl.type !== 'file') return;
+
+    var path = ctrl.getAttribute('data-path');
+    if (!path) return;
+
+    var file = ctrl.files && ctrl.files[0];
+    if (!file) return;
+
+    // ── Basic validation ──
+    if (!file.type.startsWith('image/')) {
+      showUploadStatus(path, 'Not an image file.', true);
+      ctrl.value = '';
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      showUploadStatus(path, 'File too large (max 8 MB).', true);
+      ctrl.value = '';
+      return;
+    }
+
+    // ── Compose deterministic storage key ──
+    var ext        = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    var objectPath = path.replace(/\./g, '-') + '-' + Date.now() + '.' + ext;
+    var bucket     = window.CMS_PHOTO_BUCKET || 'site-photos';
+
+    showUploadStatus(path, 'Uploading…', false);
+
+    sb.storage.from(bucket).upload(objectPath, file, { upsert: true })
+      .then(function (res) {
+        if (res.error) {
+          showUploadStatus(path, res.error.message || 'Upload failed.', true);
+          // Leave DRAFT value intact (graceful failure)
+          return;
+        }
+
+        // ── Get public URL ──
+        var urlResult = sb.storage.from(bucket).getPublicUrl(objectPath);
+        var publicUrl = urlResult.data && urlResult.data.publicUrl;
+        if (!publicUrl) {
+          showUploadStatus(path, 'Could not get public URL.', true);
+          return;
+        }
+
+        // ── Update DRAFT + UI ──
+        setAt(DRAFT, path, publicUrl);
+
+        var thumb   = document.getElementById('field-' + path);
+        var caption = document.getElementById('caption-' + path);
+        if (thumb)   { thumb.src = publicUrl; }
+        if (caption) { caption.textContent = publicUrl; }
+
+        pushDraft();
+        refreshUnsaved();
+
+        showUploadStatus(path, 'Uploaded.', false);
+        // Fade status after 2 s
+        setTimeout(function () { clearUploadStatus(path); }, 2000);
+      })
+      .catch(function (err) {
+        showUploadStatus(path, err.message || 'Upload failed.', true);
+      });
+  });
+
+  /** Locate or create the .cms-row-status span next to a file input */
+  function getStatusEl(path) {
+    var id = 'upload-status-' + path;
+    var el = document.getElementById(id);
+    if (!el) {
+      el = document.createElement('span');
+      el.id = id;
+      el.className = 'cms-row-status';
+      var fileInput = document.getElementById('upload-' + path);
+      if (fileInput && fileInput.parentNode) {
+        fileInput.parentNode.insertBefore(el, fileInput.nextSibling);
+      }
+    }
+    return el;
+  }
+
+  function showUploadStatus(path, msg, isError) {
+    var el = getStatusEl(path);
+    el.textContent = msg;
+    el.className   = 'cms-row-status' + (isError ? ' error' : '');
+  }
+
+  function clearUploadStatus(path) {
+    var el = document.getElementById('upload-status-' + path);
+    if (el) { el.textContent = ''; el.className = 'cms-row-status'; }
+  }
+
+  /* ── 11b. PUBLISH ── */
+
+  var btnPublish = document.getElementById('btn-publish');
+  var btnDiscard = document.getElementById('btn-discard');
+  var publishStatusEl = document.getElementById('publish-status');
+
+  function setPublishStatus(msg) {
+    if (publishStatusEl) publishStatusEl.textContent = msg || '';
+  }
+
+  function setPublishBtnsDisabled(disabled) {
+    btnPublish.disabled = disabled;
+    btnDiscard.disabled = disabled;
+  }
+
+  btnPublish.addEventListener('click', function () {
+    // 1. Validate
+    var result = validateDraft();
+    if (!result.ok) {
+      setPublishStatus(
+        'Validation failed: "' + result.label + '" has an invalid value.'
+      );
+      return;
+    }
+
+    // 2. Disable buttons + show status
+    setPublishBtnsDisabled(true);
+    setPublishStatus('Publishing…');
+
+    // 3. Write to Supabase
+    sb.from('site_content')
+      .update({ content: DRAFT, updated_at: new Date().toISOString() })
+      .eq('id', 1)
+      .then(function (res) {
+        if (res.error) {
+          var err = res.error;
+          var isRls = (
+            err.status === 401 || err.status === 403 ||
+            (err.message && /policy|permission/i.test(err.message))
+          );
+          if (isRls) {
+            setPublishStatus('Session expired — sign in again.');
+            sb.auth.signOut();
+          } else {
+            setPublishStatus(err.message || 'Publish failed.');
+            // Re-enable buttons if it's a recoverable error
+            var dirty = JSON.stringify(DRAFT) !== JSON.stringify(RECORD);
+            btnPublish.disabled = !dirty;
+            btnDiscard.disabled = !dirty;
+          }
+          return;
+        }
+
+        // 4. Success: promote DRAFT → RECORD (mutate same object reference)
+        var keys = Object.keys(RECORD);
+        keys.forEach(function (k) { delete RECORD[k]; });
+        var draftKeys = Object.keys(DRAFT);
+        draftKeys.forEach(function (k) { RECORD[k] = deepClone(DRAFT[k]); });
+
+        refreshUnsaved(); // will also disable publish/discard
+
+        setPublishStatus('Published. Live in a moment.');
+        setTimeout(function () { setPublishStatus(''); }, 4000);
+      })
+      .catch(function (err) {
+        setPublishStatus(err.message || 'Publish failed.');
+        var dirty = JSON.stringify(DRAFT) !== JSON.stringify(RECORD);
+        btnPublish.disabled = !dirty;
+        btnDiscard.disabled = !dirty;
+      });
+  });
+
+  /* ── 11c. DISCARD ── */
+
+  btnDiscard.addEventListener('click', function () {
+    if (!confirm('Discard unsaved changes?')) return;
+
+    // Reset DRAFT to a fresh clone of RECORD
+    DRAFT = deepClone(RECORD);
+
+    // Re-render form and reload preview
+    renderForm();
+    var ifr = document.getElementById('cms-preview');
+    if (ifr) {
+      /* eslint-disable no-self-assign */
+      ifr.src = ifr.src;
+      /* eslint-enable no-self-assign */
+    }
+
+    pushDraft();
+    refreshUnsaved();
+  });
+
+  /* ── 11d. PATCH refreshUnsaved to also toggle publish / discard buttons ── */
+  // Store original and wrap it so button toggling is automatic
+  var _origRefreshUnsaved = refreshUnsaved;
+  refreshUnsaved = function () {
+    _origRefreshUnsaved();
+    var dirty = JSON.stringify(DRAFT) !== JSON.stringify(RECORD);
+    if (btnPublish) btnPublish.disabled = !dirty;
+    if (btnDiscard) btnDiscard.disabled = !dirty;
+  };
+
+  /* ── 12. EXTENSION HOOKS (Tasks 6/7 attach here) ── */
   /**
    * window.ADMIN_RECORD  — live reference to the current record object.
    * window.ADMIN_DRAFT   — live reference to the working draft (Task 6).
